@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmoPet - Face-API Reliable</title>
+    <!-- Load face-api.js dengan callback -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js" 
+            onload="window._fapiReady=true" 
+            onerror="window._fapiReady=false"></script>
+    <style>
+        :root { --bg:#0f172a; --pri:#6C63FF; --acc:#00D2FC; --red:#ff4757; --grn:#2ed573; --warn:#ffa502; --txt:#f8fafc; --dim:#94a3b8; }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
+        body { background:var(--bg); color:var(--txt); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+        .app { width:100%; max-width:400px; height:100vh; max-height:800px; background:linear-gradient(180deg,#1e293b,#0f172a); position:relative; display:flex; flex-direction:column; box-shadow:0 0 50px rgba(0,0,0,.5); }
+        @media(min-width:450px){ .app{ height:90vh; border-radius:30px; border:1px solid rgba(255,255,255,.1); } }
+        header { padding:15px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,.05); background:rgba(0,0,0,.2); z-index:10; }
+        .logo { font-weight:800; font-size:1.1rem; letter-spacing:1px; color:var(--acc); }
+        .pet { display:flex; align-items:center; gap:8px; font-size:.85rem; background:rgba(108,99,255,.2); padding:5px 12px; border-radius:20px; }
+        .face-box { flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:20px; text-align:center; }
+        .circle { width:180px; height:180px; border-radius:50%; background:linear-gradient(135deg,rgba(108,99,255,.3),rgba(0,210,252,.3)); display:flex; justify-content:center; align-items:center; margin-bottom:25px; border:3px solid rgba(255,255,255,.1); transition:.3s; }
+        .circle.active { border-color:var(--acc); box-shadow:0 0 30px rgba(0,210,252,.4); animation:pulse 2s infinite; }
+        @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(0,210,252,.4);} 70%{box-shadow:0 0 0 20px rgba(0,210,252,0);} 100%{box-shadow:0 0 0 0 rgba(0,210,252,0);} }
+        .emoji { font-size:80px; transition:.2s; } .emoji.pop { animation:pop .3s; }
+        @keyframes pop { 0%,100%{transform:scale(1);} 50%{transform:scale(1.3);} }
+        .label { font-size:1.5rem; font-weight:700; margin-bottom:5px; text-transform:capitalize; background:linear-gradient(90deg,var(--pri),var(--acc)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        .bar { width:200px; height:6px; background:rgba(255,255,255,.1); border-radius:10px; overflow:hidden; margin:10px auto; }
+        .fill { height:100%; background:linear-gradient(90deg,var(--pri),var(--acc)); width:0%; transition:.3s; }
+        .c-text { font-size:.8rem; color:var(--dim); }
+        .status { margin-top:15px; font-size:.85rem; color:var(--dim); display:flex; align-items:center; gap:6px; }
+        .status.on { color:var(--grn); } .status.fallback { color:var(--warn); }
+        .input { background:rgba(0,0,0,.3); padding:20px; border-radius:20px 20px 0 0; backdrop-filter:blur(10px); text-align:center; }
+        .trans { min-height:50px; background:rgba(255,255,255,.05); border-radius:15px; padding:12px 15px; margin-bottom:15px; font-style:italic; color:var(--dim); font-size:.9rem; display:flex; align-items:center; justify-content:center; }
+        .mic { width:65px; height:65px; border-radius:50%; border:none; background:var(--pri); color:white; font-size:26px; cursor:pointer; box-shadow:0 0 20px rgba(108,99,255,.4); transition:.3s; display:flex; justify-content:center; align-items:center; margin:0 auto; }
+        .mic:hover { transform:scale(1.05); } .mic:disabled { opacity:.5; cursor:not-allowed; }
+        .mic.listen { background:var(--red); animation:pulse 1.5s infinite; }
+        .hint { margin-top:10px; font-size:.75rem; color:var(--dim); }
+        .hist { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:15px; min-height:28px; }
+        .chip { padding:4px 10px; border-radius:12px; font-size:.7rem; background:rgba(255,255,255,.1); color:var(--dim); display:flex; align-items:center; gap:4px; }
+        .chip.act { background:var(--pri); color:white; font-weight:600; }
+        #vid { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+        .ov { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.85); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:100; opacity:0; pointer-events:none; transition:.3s; text-align:center; padding:30px; }
+        .ov.show { opacity:1; pointer-events:all; }
+        .ov i { font-size:50px; margin-bottom:15px; animation:pop .4s; } .ov h2 { margin-bottom:8px; } .ov p { color:var(--dim); margin-bottom:20px; }
+        .btn { background:white; color:black; border:none; padding:10px 24px; border-radius:20px; cursor:pointer; font-weight:600; }
+        .load { position:absolute; top:0; left:0; right:0; bottom:0; background:var(--bg); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:200; text-align:center; padding:30px; transition:.3s; }
+        .load.hide { opacity:0; pointer-events:none; }
+        .spin { width:50px; height:50px; border:4px solid rgba(108,99,255,.3); border-top-color:var(--pri); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:20px; }
+        @keyframes spin { to{transform:rotate(360deg);} }
+        .skip-btn { margin-top:20px; background:transparent; color:var(--acc); border:1px solid var(--acc); padding:8px 16px; border-radius:20px; cursor:pointer; font-size:.8rem; display:none; }        .skip-btn:hover { background:var(--acc); color:#000; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div id="load" class="load">
+        <div class="spin"></div>
+        <div id="lt">Memuat face-api.js...</div>
+        <div class="skip-btn" id="skipBtn" onclick="fallbackToVoice('Manual skip')">⏭️ Lewati, pakai mode suara</div>
+    </div>
+    <header><div class="logo">EmoPet.</div><div class="pet"><span id="pe">🐣</span> Lv.<span id="pl">1</span></div></header>
+    <div class="face-box">
+        <div class="circle" id="fc"><div class="emoji" id="fe">😐</div></div>
+        <div class="label" id="el">Neutral</div>
+        <div class="bar"><div class="fill" id="cf"></div></div>
+        <div class="c-text"><span id="cv">0</span>% confidence</div>
+        <div class="hist" id="hi"></div>
+        <div class="status" id="fs"><span>📷</span> <span id="ft">Menyiapkan...</span></div>
+    </div>
+    <div class="input">
+        <div class="trans" id="tr">Curhatlah... aku mendengarkan. 🎤</div>
+        <button class="mic" id="mb" disabled>🎤</button>
+        <div class="hint">Tekan mic untuk curhat</div>
+    </div>
+    <div id="ov" class="ov"><i id="oi">✨</i><h2 id="ot">Terdengar!</h2><p id="od">Emosi terekam.</p><button class="btn" onclick="closeOv()">Lanjut</button></div>
+    <video id="vid" autoplay muted playsinline></video>
+</div>
+
+<script>
+const E={}; 
+const EM={happy:{e:'😊',c:'#ffeaa7',p:'😇',d:'Senang itu menular! 🌟'},sad:{e:'😔',c:'#74b9ff',p:'🥺',d:'Peluk virtual 🫂'},angry:{e:'😠',c:'#ff7675',p:'👹',d:'Tarik napas... 🧘'},surprised:{e:'😮',c:'#a29bfe',p:'😲',d:'Wah, seru! 👀'},neutral:{e:'😐',c:'#b2bec3',p:'🐣',d:'Santai aja 💙'}};
+let S={cam:false,det:false,cur:'neutral',conf:0,lv:1,hist:[],detId:null,voice:null,mode:'loading'};
+let loadTimer;
+
+// DOM Cache
+['fe','fc','el','cf','cv','ft','hi','tr','mb','ov','oi','ot','od','pe','pl','vid','load','lt','skipBtn'].forEach(id=>E[id]=document.getElementById(id));
+
+// Anti-Hang Init
+window.onload = () => {
+    loadTimer = setTimeout(() => fallbackToVoice('Timeout: Loading terlalu lama (>8s)'), 8000);
+    setTimeout(() => E.skipBtn.style.display = 'block', 3000); // Show skip button after 3s
+    init();
+};
+
+async function init(){
+    try{
+        E.lt.textContent='1/3 Cek library...';
+        if(typeof faceapi==='undefined' && !window._fapiReady) throw new Error('Library face-api.js gagal dimuat');
+        
+        E.lt.textContent='2/3 Download model (~4MB)...';        await loadModels();
+        
+        E.lt.textContent='3/3 Akses kamera...';
+        await setupCamera();
+        
+        // Success
+        clearTimeout(loadTimer);
+        S.mode='face'; E.mb.disabled=false;
+        E.load.classList.add('hide'); E.skipBtn.style.display='none';
+        startDetection();
+        setupVoice();
+    }catch(err){
+        console.warn('Init failed:', err.message);
+        fallbackToVoice(err.message);
+    }
+}
+
+async function loadModels(){
+    const URLS = [
+        'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model',
+        'https://justadudewhohacks.github.io/face-api.js/models'
+    ];
+    let loaded = false;
+    for(const url of URLS){
+        try{
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(url),
+                faceapi.nets.faceExpressionNet.loadFromUri(url)
+            ]);
+            loaded = true; break;
+        }catch(e){ console.warn(`Model load fail (${url}):`, e.message); }
+    }
+    if(!loaded) throw new Error('Semua sumber model gagal');
+}
+
+async function setupCamera(){
+    try{
+        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:320}},audio:false});
+        E.vid.srcObject = stream; await E.vid.play();
+        S.cam = true; E.ft.textContent='Aktif'; E.fs.className='status on';
+    }catch(e){ throw new Error('Kamera ditolak/tidak tersedia'); }
+}
+
+function startDetection(){
+    if(!S.cam) return;
+    S.det = true;
+    S.detId = setInterval(async()=>{
+        if(!S.det) return;
+        try{
+            const det = await faceapi.detectAllFaces(E.vid, new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5}))                                   .withFaceExpressions();
+            if(det.length && det[0].expressions){
+                let max=0, emo='neutral';
+                for(const[k,v] of Object.entries(det[0].expressions)) if(v>max){max=v;emo=k;}
+                if(max>0.5) updateUI(emo, max);
+            }
+        }catch(e){} // Silent fail to keep loop alive
+    }, 400);
+}
+
+function updateUI(emo, conf){
+    if(emo===S.cur && Math.abs(conf-S.conf)<0.05) return;
+    S.cur=emo; S.conf=conf; const c=EM[emo]||EM.neutral;
+    E.fe.classList.add('pop'); setTimeout(()=>E.fe.classList.remove('pop'),300);
+    E.fe.textContent=c.e; E.el.textContent=emo[0].toUpperCase()+emo.slice(1);
+    E.el.style.background=`linear-gradient(90deg,${c.c},${c.c}cc)`; E.el.style.webkitBackgroundClip='text';
+    E.cf.style.width=Math.round(conf*100)+'%'; E.cv.textContent=Math.round(conf*100);
+    E.fc.classList.toggle('active', conf>0.7);
+    addHist(emo);
+    if(Math.random()>0.8){S.lv++;E.pl.textContent=S.lv;showOv('🎉 Level Up!',`Pet level ${S.lv}`,'⭐');}
+}
+
+function addHist(e){ S.hist.unshift(e); if(S.hist.length>5)S.hist.pop();
+    E.hi.innerHTML=S.hist.map(x=>{const c=EM[x];return `<span class="chip ${x===S.cur?'act':''}" style="background:${c.c}33">${c.e}${x}</span>`}).join('');
+}
+
+function setupVoice(){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){E.tr.textContent='⚠️ Gunakan Chrome/Edge';return;}
+    S.voice=new SR(); S.voice.lang='id-ID';
+    S.voice.onstart=()=>{E.mb.classList.add('listen');E.tr.textContent='🎤 Mendengarkan...';};
+    S.voice.onend=()=>E.mb.classList.remove('listen');
+    S.voice.onresult=e=>{const t=e.results[0][0].transcript;E.tr.textContent=`"${t}"`;procVoice(t);};
+    S.voice.onerror=()=>E.mb.classList.remove('listen');
+    E.mb.onclick=()=>{try{S.voice.start();}catch(e){}};
+}
+
+function procVoice(t){
+    const l=t.toLowerCase(); let emo='neutral';
+    if(l.match(/marah|kesel|benci|sial|jengkel/))emo='angry';
+    else if(l.match(/sedih|nangis|galau|sepi|kecewa/))emo='sad';
+    else if(l.match(/senang|bahagia|senyum|tawa|haha|mantap/))emo='happy';
+    else if(l.match(/kaget|wow|astaga|terkejut/))emo='surprised';
+    if(emo!=='neutral'){const c=EM[emo];S.cur=emo;S.conf=0.9;updateUI(emo,0.9);showOv(emo.toUpperCase(),c.desc,c.e);}
+}
+
+function fallbackToVoice(msg){
+    clearTimeout(loadTimer);
+    S.mode='voice'; E.load.classList.add('hide'); E.skipBtn.style.display='none';
+    E.ft.textContent=msg?`Gagal: ${msg}`:'Mode Suara Aktif'; E.fs.className='status fallback';    E.fe.textContent='🎤'; E.el.textContent='Voice Mode'; E.cf.style.width='0%'; E.cv.textContent='0';
+    setupVoice(); E.mb.disabled=false;
+}
+
+function showOv(t,d,i){E.ot.textContent=t;E.od.textContent=d;E.oi.textContent=i;E.ov.classList.add('show');setTimeout(closeOv,2500);}
+function closeOv(){E.ov.classList.remove('show');E.tr.textContent='Ada lagi? 👂';}
+
+document.addEventListener('visibilitychange',()=>{ if(S.mode==='face') S.det=!document.hidden; });
+window.addEventListener('beforeunload',()=>{ if(S.detId) clearInterval(S.detId); if(E.vid?.srcObject) E.vid.srcObject.getTracks().forEach(t=>t.stop()); });
+</script>
+</body>
+</html>
