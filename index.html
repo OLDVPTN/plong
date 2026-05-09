@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EmoPet - Face-API Reliable</title>
-    <!-- Load face-api.js dengan callback -->
+    <title>EmoPet - Face-API Reliable v2</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js" 
             onload="window._fapiReady=true" 
             onerror="window._fapiReady=false"></script>
@@ -47,7 +46,8 @@
         .load.hide { opacity:0; pointer-events:none; }
         .spin { width:50px; height:50px; border:4px solid rgba(108,99,255,.3); border-top-color:var(--pri); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:20px; }
         @keyframes spin { to{transform:rotate(360deg);} }
-        .skip-btn { margin-top:20px; background:transparent; color:var(--acc); border:1px solid var(--acc); padding:8px 16px; border-radius:20px; cursor:pointer; font-size:.8rem; display:none; }        .skip-btn:hover { background:var(--acc); color:#000; }
+        .skip-btn { margin-top:20px; background:transparent; color:var(--acc); border:1px solid var(--acc); padding:8px 16px; border-radius:20px; cursor:pointer; font-size:.8rem; display:none; }
+        .skip-btn:hover { background:var(--acc); color:#000; }        .debug-box { margin-top:15px; font-size:.75rem; color:var(--dim); background:rgba(255,255,255,.05); padding:8px; border-radius:8px; display:none; text-align:left; }
     </style>
 </head>
 <body>
@@ -56,6 +56,7 @@
         <div class="spin"></div>
         <div id="lt">Memuat face-api.js...</div>
         <div class="skip-btn" id="skipBtn" onclick="fallbackToVoice('Manual skip')">⏭️ Lewati, pakai mode suara</div>
+        <div class="debug-box" id="debug"></div>
     </div>
     <header><div class="logo">EmoPet.</div><div class="pet"><span id="pe">🐣</span> Lv.<span id="pl">1</span></div></header>
     <div class="face-box">
@@ -81,35 +82,37 @@ const EM={happy:{e:'😊',c:'#ffeaa7',p:'😇',d:'Senang itu menular! 🌟'},sad
 let S={cam:false,det:false,cur:'neutral',conf:0,lv:1,hist:[],detId:null,voice:null,mode:'loading'};
 let loadTimer;
 
-// DOM Cache
-['fe','fc','el','cf','cv','ft','hi','tr','mb','ov','oi','ot','od','pe','pl','vid','load','lt','skipBtn'].forEach(id=>E[id]=document.getElementById(id));
+['fe','fc','el','cf','cv','ft','hi','tr','mb','ov','oi','ot','od','pe','pl','vid','load','lt','skipBtn','debug'].forEach(id=>E[id]=document.getElementById(id));
 
-// Anti-Hang Init
 window.onload = () => {
+    // Cek secure context (wajib localhost atau https)
+    if(!location.hostname.includes('localhost') && location.protocol !== 'https:'){
+        showDebug('⚠️ Browser memblokir kamera di non-localhost. Harus dibuka via `http://localhost:xxxx`');
+    }
+    
     loadTimer = setTimeout(() => fallbackToVoice('Timeout: Loading terlalu lama (>8s)'), 8000);
-    setTimeout(() => E.skipBtn.style.display = 'block', 3000); // Show skip button after 3s
+    setTimeout(() => E.skipBtn.style.display = 'block', 3000);
     init();
 };
 
 async function init(){
-    try{
-        E.lt.textContent='1/3 Cek library...';
+    try{        E.lt.textContent='1/3 Cek library...';
         if(typeof faceapi==='undefined' && !window._fapiReady) throw new Error('Library face-api.js gagal dimuat');
         
-        E.lt.textContent='2/3 Download model (~4MB)...';        await loadModels();
+        E.lt.textContent='2/3 Download model (~4MB)...';
+        await loadModels();
         
         E.lt.textContent='3/3 Akses kamera...';
         await setupCamera();
         
-        // Success
         clearTimeout(loadTimer);
         S.mode='face'; E.mb.disabled=false;
         E.load.classList.add('hide'); E.skipBtn.style.display='none';
         startDetection();
         setupVoice();
     }catch(err){
-        console.warn('Init failed:', err.message);
-        fallbackToVoice(err.message);
+        console.error('Init error:', err);
+        fallbackToVoice(err.message || 'Gagal inisialisasi');
     }
 }
 
@@ -118,25 +121,61 @@ async function loadModels(){
         'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model',
         'https://justadudewhohacks.github.io/face-api.js/models'
     ];
-    let loaded = false;
     for(const url of URLS){
         try{
             await Promise.all([
                 faceapi.nets.tinyFaceDetector.loadFromUri(url),
                 faceapi.nets.faceExpressionNet.loadFromUri(url)
             ]);
-            loaded = true; break;
-        }catch(e){ console.warn(`Model load fail (${url}):`, e.message); }
+            return true;
+        }catch(e){ console.warn(`Model fail (${url}):`, e.message); }
     }
-    if(!loaded) throw new Error('Semua sumber model gagal');
+    throw new Error('Semua sumber model gagal');
 }
 
+// 🛠️ KAMERA: FLEKSIBEL & ERROR-PROOF
 async function setupCamera(){
-    try{
-        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:320}},audio:false});
-        E.vid.srcObject = stream; await E.vid.play();
-        S.cam = true; E.ft.textContent='Aktif'; E.fs.className='status on';
-    }catch(e){ throw new Error('Kamera ditolak/tidak tersedia'); }
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        throw new Error('Browser tidak mendukung getUserMedia');
+    }
+
+    // Coba 3 variasi constraint (dari spesifik → paling dasar)
+    const constraintsList = [
+        { video: { facingMode: 'user', width: { ideal: 320, max: 640 } }, audio: false },
+        { video: { facingMode: 'user' }, audio: false },
+        { video: true, audio: false }
+    ];
+    let stream = null;
+    let lastErr = null;
+
+    for(const c of constraintsList){
+        try {
+            stream = await navigator.mediaDevices.getUserMedia(c);
+            break; // Sukses, keluar loop
+        } catch(e) {
+            lastErr = e;
+            console.warn(`Constraint gagal:`, c.video, e.name, e.message);
+        }
+    }
+
+    if(!stream){
+        const errName = lastErr?.name || 'Unknown';
+        const errMsg = lastErr?.message || '';
+        // Terjemahkan error umum ke bahasa user
+        let userMsg = `${errName}: ${errMsg || 'Gagal akses'}`;
+        if(errName==='NotAllowedError') userMsg='Izin kamera ditolak user';
+        else if(errName==='NotFoundError') userMsg='Tidak ada kamera terdeteksi';
+        else if(errName==='NotReadableError') userMsg='Kamera sedang dipakai aplikasi lain';
+        else if(errName==='OverconstrainedError') userMsg='Kamera tidak mendukung constraint yang diminta';
+        
+        throw new Error(userMsg);
+    }
+
+    E.vid.srcObject = stream;
+    await E.vid.play();
+    S.cam = true;
+    E.ft.textContent='Aktif';
+    E.fs.className='status on';
 }
 
 function startDetection(){
@@ -145,16 +184,16 @@ function startDetection(){
     S.detId = setInterval(async()=>{
         if(!S.det) return;
         try{
-            const det = await faceapi.detectAllFaces(E.vid, new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5}))                                   .withFaceExpressions();
+            const det = await faceapi.detectAllFaces(E.vid, new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.5}))
+                                   .withFaceExpressions();
             if(det.length && det[0].expressions){
                 let max=0, emo='neutral';
                 for(const[k,v] of Object.entries(det[0].expressions)) if(v>max){max=v;emo=k;}
                 if(max>0.5) updateUI(emo, max);
             }
-        }catch(e){} // Silent fail to keep loop alive
+        }catch(e){} 
     }, 400);
 }
-
 function updateUI(emo, conf){
     if(emo===S.cur && Math.abs(conf-S.conf)<0.05) return;
     S.cur=emo; S.conf=conf; const c=EM[emo]||EM.neutral;
@@ -194,15 +233,16 @@ function procVoice(t){
 function fallbackToVoice(msg){
     clearTimeout(loadTimer);
     S.mode='voice'; E.load.classList.add('hide'); E.skipBtn.style.display='none';
-    E.ft.textContent=msg?`Gagal: ${msg}`:'Mode Suara Aktif'; E.fs.className='status fallback';    E.fe.textContent='🎤'; E.el.textContent='Voice Mode'; E.cf.style.width='0%'; E.cv.textContent='0';
+    E.ft.textContent=`Fallback: ${msg}`; E.fs.className='status fallback';
+    E.fe.textContent='🎤'; E.el.textContent='Voice Mode'; E.cf.style.width='0%'; E.cv.textContent='0';
     setupVoice(); E.mb.disabled=false;
 }
 
+function showDebug(msg){ E.debug.textContent=msg; E.debug.style.display='block'; }
 function showOv(t,d,i){E.ot.textContent=t;E.od.textContent=d;E.oi.textContent=i;E.ov.classList.add('show');setTimeout(closeOv,2500);}
 function closeOv(){E.ov.classList.remove('show');E.tr.textContent='Ada lagi? 👂';}
 
 document.addEventListener('visibilitychange',()=>{ if(S.mode==='face') S.det=!document.hidden; });
-window.addEventListener('beforeunload',()=>{ if(S.detId) clearInterval(S.detId); if(E.vid?.srcObject) E.vid.srcObject.getTracks().forEach(t=>t.stop()); });
-</script>
+window.addEventListener('beforeunload',()=>{ if(S.detId) clearInterval(S.detId); if(E.vid?.srcObject) E.vid.srcObject.getTracks().forEach(t=>t.stop()); });</script>
 </body>
 </html>
