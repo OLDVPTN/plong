@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmoPet - Masuk</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root { --bg: #0D0D12; --card: rgba(22, 22, 30, 0.85); --accent: #FF6B35; --accent2: #00C9A7; --text: #F0EDE6; --dim: #5A5E6B; --border: rgba(255,255,255,0.06); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Outfit', sans-serif; background: #050508; color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        
+        .auth-container {
+            width: 100%; max-width: 400px; padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        
+        .logo { font-weight: 800; font-size: 2rem; letter-spacing: 2px; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 40px; margin-top: 20px; }
+        
+        .auth-card {
+            width: 100%; background: var(--card); border: 1px solid var(--border);
+            border-radius: 24px; padding: 24px; backdrop-filter: blur(10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 24px; background: rgba(255,255,255,0.04); border-radius: 12px; padding: 4px; }
+        .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 10px; border: none; background: transparent; color: var(--dim); font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.3s; }
+        .tab-btn.active { background: var(--accent); color: #fff; box-shadow: 0 4px 10px rgba(255, 107, 53, 0.3); }
+
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 0.8rem; color: var(--dim); margin-bottom: 6px; font-weight: 600; }
+        .form-input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text); font-family: 'Outfit', sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.3s; }
+        .form-input:focus { border-color: var(--accent); }
+
+        .submit-btn { width: 100%; padding: 14px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; font-weight: 700; font-size: 1rem; cursor: pointer; margin-top: 10px; font-family: 'Outfit', sans-serif; transition: transform 0.2s, box-shadow 0.2s; }
+        .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4); }
+
+        .error-msg { color: #FF4757; font-size: 0.8rem; margin-top: 10px; text-align: center; display: none; }
+        .pet-icon { font-size: 60px; margin-bottom: -10px; animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    </style>
+</head>
+<body>
+
+<div class="auth-container">
+    <div class="pet-icon">🐣</div>
+    <div class="logo">EmoPet.</div>
+
+    <div class="auth-card">
+        <div class="tabs">
+            <button class="tab-btn active" id="tabLogin" onclick="switchTab('login')">Masuk</button>
+            <button class="tab-btn" id="tabRegister" onclick="switchTab('register')">Daftar</button>
+        </div>
+
+        <form id="authForm" onsubmit="handleSubmit(event)">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-input" id="username" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-input" id="password" required>
+            </div>
+            <button type="submit" class="submit-btn" id="submitBtn">Masuk</button>
+            <div class="error-msg" id="errorMsg"></div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Cek jika sudah login, langsung lempar ke dashboard
+    if (localStorage.getItem('emopet_current_user')) {
+        window.location.href = '/dashboard';
+    }
+
+    let currentTab = 'login';
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+        document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+        document.getElementById('submitBtn').textContent = tab === 'login' ? 'Masuk' : 'Daftar';
+        document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    function getDefaultData() {
+        return { petLevel: 1, xp: 0, xpToNext: 20, totalStats: { happy: 0, sad: 0, angry: 0, neutral: 0 }, history: [] };
+    }
+
+    function handleSubmit(e) {
+        e.preventDefault();
+        const u = document.getElementById('username').value.trim();
+        const p = document.getElementById('password').value;
+        const errEl = document.getElementById('errorMsg');
+
+        let users = JSON.parse(localStorage.getItem('emopet_users') || '[]');
+
+        if (currentTab === 'register') {
+            // Logika Daftar
+            const exists = users.find(user => user.username === u);
+            if (exists) {
+                errEl.textContent = 'Username sudah digunakan!';
+                errEl.style.display = 'block';
+                return;
+            }
+            
+            // Buat user baru
+            users.push({ username: u, password: p, data: getDefaultData() });
+            localStorage.setItem('emopet_users', JSON.stringify(users));
+            
+            // Auto login setelah daftar
+            localStorage.setItem('emopet_current_user', u);
+            window.location.href = '/dashboard';
+
+        } else {
+            // Logika Masuk
+            const user = users.find(user => user.username === u && user.password === p);
+            if (!user) {
+                errEl.textContent = 'Username atau password salah!';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            // Set sesi login
+            localStorage.setItem('emopet_current_user', u);
+            window.location.href = '/dashboard';
+        }
+    }
+</script>
+</body>
+</html>
