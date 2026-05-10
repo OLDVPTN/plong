@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmoPet - Curhat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0D0D12; --card: rgba(22, 22, 30, 0.85); --accent: #FF6B35; --accent2: #00C9A7;
+            --danger: #FF4757; --warning: #FFD93D; --text: #F0EDE6; --dim: #5A5E6B; --border: rgba(255,255,255,0.06);
+            --emotion-color: #5A5E6B;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Outfit', sans-serif; background: #050508; color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        .app { width: 100%; max-width: 420px; height: 100vh; max-height: 860px; background: var(--bg); position: relative; display: flex; flex-direction: column; overflow: hidden; }
+        @media (min-width: 480px) { .app { height: 92vh; border-radius: 28px; border: 1px solid var(--border); box-shadow: 0 0 80px rgba(0,0,0,0.6); } }
+
+        /* LOADING */
+        .loading-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; transition: opacity 0.6s, visibility 0.6s; }
+        .loading-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .load-pet { font-size: 64px; animation: loadBounce 1s ease-in-out infinite; }
+        @keyframes loadBounce { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-12px) scale(1.08); } }
+        .load-bar-track { width: 180px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; }
+        .load-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.4s ease; }
+        .load-msg { font-size: 0.82rem; color: var(--dim); text-align: center; }
+
+        /* HEADER & NAV */
+        header { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.25); flex-shrink: 0; z-index: 10; }
+        .logo { font-weight: 800; font-size: 1.15rem; letter-spacing: 1.5px; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-title { font-size: 0.9rem; font-weight: 600; color: var(--dim); }
+        .main-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; position: relative; padding-bottom: 70px; }
+        .main-scroll::-webkit-scrollbar { width: 0; }
+        #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; height: 65px; background: rgba(13,13,18,0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 20; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--dim); cursor: pointer; transition: color 0.3s; background: none; border: none; font-family: 'Outfit', sans-serif; font-size: 0.7rem; font-weight: 600; text-decoration: none; }
+        .nav-item i { font-size: 1.2rem; } .nav-item.active { color: var(--accent); }
+
+        /* CAMERA */
+        .cam-section { padding: 16px 20px 0; position: relative; z-index: 2; flex-shrink: 0; }
+        .cam-wrapper { position: relative; width: 100%; aspect-ratio: 4/3; border-radius: 20px; overflow: hidden; background: #111118; border: 1px solid var(--border); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+        .cam-wrapper video, .cam-wrapper canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .cam-wrapper canvas { z-index: 2; }
+        .cam-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--dim); font-size: 0.85rem; z-index: 3; text-align: center; padding: 20px; }
+        .cam-placeholder i { font-size: 2rem; opacity: 0.4; }
+        .timer-overlay { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 5; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); padding: 6px 16px; border-radius: 99px; display: none; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.1); font-variant-numeric: tabular-nums; }
+        .timer-overlay.active { display: flex; }
+        .timer-icon { color: var(--danger); font-size: 0.7rem; animation: blink 1s infinite; } @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .timer-text { font-size: 0.9rem; font-weight: 700; letter-spacing: 1px; }
+        .timer-target { font-size: 0.7rem; color: var(--dim); }
+        .timer-check { color: var(--accent2); font-size: 0.8rem; margin-left: 4px; display: none; } .timer-check.show { display: inline; }
+        .emotion-badge { position: absolute; bottom: 12px; left: 12px; z-index: 4; background: rgba(0,0,0,0.65); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 99px; font-size: 0.8rem; font-weight: 600; display: none; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,0.08); }
+        .emotion-badge.active { display: flex; }
+        .emotion-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--emotion-color); transition: background 0.5s; }
+        .mic-status { position: absolute; bottom: 12px; right: 12px; z-index: 4; background: rgba(255,71,87,0.7); backdrop-filter: blur(10px); padding: 5px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: 600; display: none; align-items: center; gap: 5px; }
+        .mic-status.active { display: flex; }
+        .voice-transcript { position: absolute; bottom: 50px; left: 0; right: 0; z-index: 4; background: linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 100%); padding: 20px 16px 10px; min-height: 30px; opacity: 0; transition: opacity 0.3s; }
+        .voice-transcript.active { opacity: 1; }
+        .voice-text { font-size: 0.9rem; font-weight: 500; color: #fff; text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+
+        /* PET & EXPR */
+        .pet-area { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; padding: 24px 20px 0; flex-shrink: 0; }
+        .pet-glow { position: absolute; width: 160px; height: 160px; border-radius: 50%; background: var(--emotion-color); filter: blur(60px); opacity: 0.2; transition: background 0.8s; pointer-events: none; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .pet-avatar { font-size: 80px; position: relative; z-index: 2; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.4)); animation: petBreathe 3s ease-in-out infinite; }
+        @keyframes petBreathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-6px) scale(1.03); } }
+        .pet-avatar.react { animation: petReact 0.5s ease; } @keyframes petReact { 0% { transform: scale(1); } 30% { transform: scale(1.25); } 60% { transform: scale(0.95); } 100% { transform: scale(1); } }
+        .pet-info { text-align: center; margin-top: 10px; }
+        .pet-level { font-size: 0.78rem; font-weight: 600; color: var(--dim); margin-bottom: 6px; }
+        .xp-bar-track { width: 140px; height: 5px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; margin: 0 auto; }
+        .xp-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.5s ease; }
+        .expr-section { padding: 16px 20px 0; position: relative; z-index: 2; flex-shrink: 0; }
+        .expr-section h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--dim); margin-bottom: 10px; }
+        .expr-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .expr-icon { font-size: 0.9rem; width: 24px; text-align: center; }
+        .expr-label { font-size: 0.75rem; color: var(--dim); width: 60px; }
+        .expr-bar-track { flex: 1; height: 8px; background: rgba(255,255,255,0.05); border-radius: 99px; overflow: hidden; }
+        .expr-bar-fill { height: 100%; width: 0%; border-radius: 99px; transition: width 0.35s ease; }
+        .expr-pct { font-size: 0.7rem; color: var(--dim); width: 32px; text-align: right; font-variant-numeric: tabular-nums; }
+
+        /* OVERLAYS & TOAST */
+        .overlay { position: absolute; inset: 0; background: rgba(5,5,8,0.95); backdrop-filter: blur(15px); z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .overlay.active { opacity: 1; visibility: visible; }
+        .overlay-icon { font-size: 50px; margin-bottom: 16px; } .overlay h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; } .overlay p { font-size: 0.85rem; color: var(--dim); line-height: 1.5; margin-bottom: 24px; max-width: 260px; }
+        .overlay-btn { background: var(--text); color: var(--bg); border: none; padding: 12px 30px; border-radius: 99px; font-weight: 700; font-family: 'Outfit', sans-serif; font-size: 0.9rem; cursor: pointer; transition: transform 0.2s; } .overlay-btn:hover { transform: scale(1.05); }
+        .robot-title { color: var(--danger); } .success-title { color: var(--accent2); } .fail-title { color: var(--warning); }
+        .toast-container { position: absolute; top: 70px; left: 20px; right: 20px; z-index: 150; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+        .toast { background: rgba(20,20,28,0.95); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; opacity: 0; transform: translateY(-10px); transition: all 0.3s; pointer-events: auto; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+
+<div class="app" id="app">
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="load-pet">🥚</div><div class="load-bar-track"><div class="load-bar-fill" id="loadBar"></div></div><div class="load-msg" id="loadMsg">Memulai...</div>
+    </div>
+    <div class="toast-container" id="toastContainer"></div>
+    <canvas id="particleCanvas"></canvas>
+
+    <div class="overlay" id="robotOverlay"><div class="overlay-icon">🤖</div><h2 class="robot-title">Robot Terdeteksi!</h2><p>Kamu diam selama 10 detik.</p><button class="overlay-btn" onclick="dismissOverlay('robotOverlay')">Mengerti</button></div>
+    <div class="overlay" id="successOverlay"><div class="overlay-icon">🌟</div><h2 class="success-title">Sesi Selesai!</h2><p id="successDesc">Kamu curhat selama 1 menit.</p><button class="overlay-btn" onclick="dismissOverlay('successOverlay')">Lanjut</button></div>
+    <div class="overlay" id="failOverlay"><div class="overlay-icon">⏱️</div><h2 class="fail-title">Waktu Kurang!</h2><p>Curhat minimal 1 menit untuk poin.</p><button class="overlay-btn" onclick="dismissOverlay('failOverlay')">Coba Lagi</button></div>
+
+    <header>
+        <div class="logo">EmoPet.</div>
+        <div class="header-title">Curhat</div>
+    </header>
+
+    <div class="main-scroll" id="pageCurhat">
+        <section class="cam-section">
+            <div class="cam-wrapper" id="camWrapper">
+                <video id="camVideo" autoplay playsinline muted></video>
+                <canvas id="camCanvas"></canvas>
+                <div class="cam-placeholder" id="camPlaceholder"><i class="fas fa-video"></i><span>Klik tombol Mulai untuk curhat (Min. 1 Menit)</span></div>
+                <div class="timer-overlay" id="timerOverlay"><i class="fas fa-circle timer-icon"></i><span class="timer-text" id="timerText">00:00</span><span class="timer-target">/ 01:00</span><i class="fas fa-check-circle timer-check" id="timerCheck"></i></div>
+                <div class="emotion-badge" id="emotionBadge"><span class="emotion-dot" id="emotionDot"></span><span id="emotionLabel">Mendeteksi...</span></div>
+                <div class="mic-status" id="micStatus"><i class="fas fa-circle" style="font-size:6px;"></i> Mic</div>
+                <div class="voice-transcript" id="voiceTranscript"><div class="voice-text" id="voiceText"></div></div>
+            </div>
+        </section>
+        <section class="pet-area">
+            <div class="pet-glow" id="petGlow"></div>
+            <div class="pet-avatar" id="petAvatar">🥚</div>
+            <div class="pet-info"><div class="pet-level">Level <span id="petLevel">1</span></div><div class="xp-bar-track"><div class="xp-bar-fill" id="xpBar"></div></div></div>
+        </section>
+        <section class="expr-section"><h3>Ekspresi Wajah</h3><div id="exprBars"></div></section>
+    </div>
+
+    <nav class="bottom-nav">
+        <a class="nav-item active" href="index.html"><i class="fas fa-video"></i> Curhat</a>
+        <a class="nav-item" href="dashboard.html"><i class="fas fa-chart-line"></i> Dashboard</a>
+        <button class="nav-item" id="navCamToggle" onclick="toggleSession()"><i class="fas fa-video-slash" id="camToggleIcon"></i> <span id="camToggleText">Mulai</span></button>
+    </nav>
+</div>
+
+<script>
+const EMOTIONS = { neutral: { icon: '😐', label: 'Netral', color: '#6B7280', pet: '🐣' }, happy: { icon: '😊', label: 'Senang', color: '#FFD93D', pet: '🌞' }, sad: { icon: '😢', label: 'Sedih', color: '#4ECDC4', pet: '🌧️' }, angry: { icon: '😠', label: 'Marah', color: '#FF4757', pet: '🔥' } };
+const PET_EVOLUTION = { 1: '🥚', 2: '🐣', 3: '🐥', 5: '🐤', 8: '🦆', 12: '🦅', 16: '🐉' };
+
+let state = { petLevel: 1, xp: 0, xpToNext: 20, totalStats: { happy: 0, sad: 0, angry: 0, neutral: 0 }, history: [], sessionActive: false, sessionStartTime: 0, lastSpeechTime: 0, sessionXP: 0, sessionMoodCounts: { happy: 0, sad: 0, angry: 0, neutral: 0 }, minDurationMs: 60000, robotTimeoutMs: 10000, currentEmotion: 'neutral' };
+
+// === AUTH GUARD & MULTI-USER STATE ===
+const currentUser = localStorage.getItem('emopet_current_user');
+if (!currentUser) { window.location.href = '/auth'; }
+
+function loadState() { 
+    try {
+        const users = JSON.parse(localStorage.getItem('emopet_users') || '[]');
+        const user = users.find(u => u.username === currentUser);
+        if (user && user.data) {
+            state.petLevel = user.data.petLevel || 1;
+            state.xp = user.data.xp || 0;
+            state.xpToNext = user.data.xpToNext || 20;
+            state.totalStats = user.data.totalStats || {happy:0,sad:0,angry:0,neutral:0};
+            state.history = user.data.history || [];
+        }
+    } catch (e) {} 
+}
+
+function saveState() { 
+    try {
+        let users = JSON.parse(localStorage.getItem('emopet_users') || '[]');
+        const userIndex = users.findIndex(u => u.username === currentUser);
+        if (userIndex !== -1) {
+            users[userIndex].data = {
+                petLevel: state.petLevel, xp: state.xp, xpToNext: state.xpToNext,
+                totalStats: state.totalStats, history: state.history
+            };
+            localStorage.setItem('emopet_users', JSON.stringify(users));
+        }
+    } catch (e) {} 
+}
+// =====================================
+
+const $ = id => document.getElementById(id);
+const camVideo = $('camVideo'); const camCanvas = $('camCanvas'); const camPlaceholder = $('camPlaceholder');
+const timerOverlay = $('timerOverlay'); const timerText = $('timerText'); const timerCheck = $('timerCheck');
+const emotionBadge = $('emotionBadge'); const emotionDot = $('emotionDot'); const emotionLabel = $('emotionLabel');
+const micStatus = $('micStatus'); const voiceTranscript = $('voiceTranscript'); const voiceText = $('voiceText');
+const petAvatar = $('petAvatar'); const petGlow = $('petGlow'); const petLevelEl = $('petLevel'); const xpBar = $('xpBar');
+const exprBars = $('exprBars'); const pCanvas = $('particleCanvas'); const pCtx = pCanvas.getContext('2d');
+
+let recognition = null; let particles = []; let detectionInterval = null; let cameraStream = null; let tickInterval = null;
+
+async function init() {
+    loadState(); updateUI(); buildExprBars(); initParticles();
+    try {
+        $('loadMsg').textContent = 'Memuat pustaka AI...'; $('loadBar').style.width = '10%';
+        await loadScript('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js');
+        $('loadMsg').textContent = 'Mengunduh model...'; $('loadBar').style.width = '40%';
+        await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/');
+        await faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/');
+        $('loadBar').style.width = '90%'; setupSpeechRecognition();
+    } catch (err) { console.error(err); $('loadMsg').textContent = 'Gagal memuat AI.'; $('loadBar').style.background = 'var(--danger)'; }
+    $('loadBar').style.width = '100%'; $('loadMsg').textContent = 'Siap!'; await sleep(400); $('loadingOverlay').classList.add('hidden'); showToast('Halo, '+currentUser+'!', '👋');
+}
+function loadScript(src) { return new Promise((resolve, reject) => { if (typeof faceapi !== 'undefined') { resolve(); return; } const s = document.createElement('script'); s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('Gagal')); document.head.appendChild(s); }); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+window.addEventListener('beforeunload', () => { if(state.sessionActive) stopCameraStream(); });
+
+async function toggleSession() { if (state.sessionActive) endSession(false); else await startSession(); }
+async function startSession() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } } });
+        cameraStream = stream; camVideo.srcObject = stream; await camVideo.play();
+        state.sessionActive = true; state.sessionXP = 0; state.sessionMoodCounts = { happy: 0, sad: 0, angry: 0, neutral: 0 }; state.sessionStartTime = Date.now(); state.lastSpeechTime = Date.now();
+        camPlaceholder.style.display = 'none'; emotionBadge.classList.add('active'); timerOverlay.classList.add('active');
+        $('camToggleIcon').className = 'fas fa-stop'; $('camToggleText').textContent = 'Stop'; $('navCamToggle').style.color = 'var(--danger)';
+        camCanvas.width = camVideo.videoWidth || 320; camCanvas.height = camVideo.videoHeight || 240;
+        if (typeof faceapi !== 'undefined') startDetection(); startListening(); startTick(); showToast('Sesi dimulai!', '🎙️');
+    } catch (err) { showToast('Izinkan akses kamera', '⚠️'); }
+}
+
+function stopCameraStream() {
+    if (cameraStream) { cameraStream.getTracks().forEach(track => track.stop()); cameraStream = null; }
+    camVideo.srcObject = null;
+    const ctx = camCanvas.getContext('2d'); ctx.clearRect(0, 0, camCanvas.width, camCanvas.height);
+    if (detectionInterval) { clearInterval(detectionInterval); detectionInterval = null; }
+    if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
+    stopListening();
+}
+
+function endSession(isRobot = false) {
+    const duration = Date.now() - state.sessionStartTime; stopCameraStream();
+    state.sessionActive = false;
+    camPlaceholder.style.display = 'flex'; emotionBadge.classList.remove('active'); voiceTranscript.classList.remove('active'); micStatus.classList.remove('active'); timerOverlay.classList.remove('active');
+    $('camToggleIcon').className = 'fas fa-video-slash'; $('camToggleText').textContent = 'Mulai'; $('navCamToggle').style.color = '';
+    
+    let dominantMood = 'neutral'; let maxMoodCount = 0;
+    for (const [mood, count] of Object.entries(state.sessionMoodCounts)) { if (count > maxMoodCount) { maxMoodCount = count; dominantMood = mood; } }
+
+    if (isRobot) { $('robotOverlay').classList.add('active'); state.sessionXP = 0; }
+    else if (duration < state.minDurationMs) { $('failOverlay').classList.add('active'); state.sessionXP = 0; }
+    else {
+        bankSessionXP(duration, dominantMood);
+        const mins = Math.floor(duration / 60000); const secs = Math.floor((duration % 60000) / 1000);
+        $('successDesc').textContent = `Kamu curhat selama ${mins}m ${secs}s. Pet mendapat ${state.sessionXP} poin!`;
+        $('successOverlay').classList.add('active');
+    }
+}
+
+function bankSessionXP(duration, dominantMood) {
+    for (const [mood, count] of Object.entries(state.sessionMoodCounts)) { state.totalStats[mood] = (state.totalStats[mood] || 0) + count; }
+    addXP(state.sessionXP);
+    state.history.unshift({ date: new Date().toISOString(), duration: Math.round(duration / 1000), xp: state.sessionXP, dominantMood: dominantMood });
+    if (state.history.length > 20) state.history.pop();
+    saveState(); state.sessionXP = 0;
+}
+
+function startTick() {
+    if (tickInterval) clearInterval(tickInterval);
+    tickInterval = setInterval(() => {
+        if (!state.sessionActive) return;
+        const now = Date.now(); const elapsed = now - state.sessionStartTime;
+        const mins = Math.floor(elapsed / 60000); const secs = Math.floor((elapsed % 60000) / 1000);
+        timerText.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        if (elapsed >= state.minDurationMs) { timerCheck.classList.add('show'); timerText.style.color = 'var(--accent2)'; } else { timerCheck.classList.remove('show'); timerText.style.color = '#fff'; }
+        if (now - state.lastSpeechTime > state.robotTimeoutMs) endSession(true);
+    }, 1000);
+}
+
+function startDetection() {
+    if (detectionInterval) clearInterval(detectionInterval);
+    detectionInterval = setInterval(async () => {
+        if (!state.sessionActive || typeof faceapi === 'undefined') return;
+        try {
+            const detection = await faceapi.detectSingleFace(camVideo, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 })).withFaceExpressions();
+            const ctx = camCanvas.getContext('2d'); ctx.clearRect(0, 0, camCanvas.width, camCanvas.height);
+            if (detection) {
+                const box = detection.detection.box; const scaleX = camCanvas.width / camVideo.videoWidth; const scaleY = camCanvas.height / camVideo.videoHeight;
+                ctx.strokeStyle = EMOTIONS[state.currentEmotion].color; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.strokeRect(box.x * scaleX, box.y * scaleY, box.width * scaleX, box.height * scaleY); ctx.setLineDash([]);
+                processExpressions(detection.expressions);
+            }
+        } catch (e) {}
+    }, 300);
+}
+
+function mapEmotions(expressions) { const c = { neutral: (expressions.neutral||0)+(expressions.surprised||0), happy: expressions.happy||0, sad: (expressions.sad||0)+(expressions.fearful||0), angry: (expressions.angry||0)+(expressions.disgusted||0) }; let max=0, dom='neutral'; for(const[e,s]of Object.entries(c)){if(s>max){max=s;dom=e;}} return {dominant:dom, scores:c}; }
+function processExpressions(raw) { const {dominant, scores} = mapEmotions(raw); for(const[e,s]of Object.entries(scores)){const b=document.querySelector(`.expr-bar-fill[data-emotion="${e}"]`);const p=document.querySelector(`.expr-pct[data-emotion="${e}"]`);if(b)b.style.width=(s*100)+'%';if(p)p.textContent=Math.round(s*100)+'%';} if(scores[dominant]>0.4&&dominant!==state.currentEmotion)setEmotion(dominant,true); }
+
+function setEmotion(emotion) {
+    const cfg = EMOTIONS[emotion]; if(!cfg) return; state.currentEmotion = emotion;
+    document.documentElement.style.setProperty('--emotion-color', cfg.color);
+    emotionDot.style.background = cfg.color; emotionLabel.textContent = cfg.label;
+    const basePet = PET_EVOLUTION[state.petLevel] || cfg.pet; petAvatar.textContent = state.petLevel >= 3 ? cfg.pet : basePet;
+    petAvatar.classList.remove('react'); void petAvatar.offsetWidth; petAvatar.classList.add('react');
+    petGlow.style.background = cfg.color; petGlow.style.opacity = '0.3';
+    if (state.sessionActive) { state.sessionXP += (emotion === 'neutral' ? 2 : 5); state.sessionMoodCounts[emotion]++; }
+    burstParticles(cfg.color, 10);
+}
+
+function setupSpeechRecognition() { const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if(!SR) return; recognition = new SR(); recognition.lang='id-ID'; recognition.continuous=true; recognition.interimResults=true; recognition.onstart=()=>{micStatus.classList.add('active');}; recognition.onend=()=>{micStatus.classList.remove('active');if(state.sessionActive){try{recognition.start();}catch(e){}}}; recognition.onresult=(e)=>{state.lastSpeechTime=Date.now();let i='',f='';for(let x=e.resultIndex;x<e.results.length;x++){const t=e.results[x][0].transcript;if(e.results[x].isFinal)f+=t;else i+=t;}voiceTranscript.classList.add('active');voiceText.textContent=f||i;if(f){processCurhat(f);const s=f;setTimeout(()=>{if(voiceText.textContent===s)voiceTranscript.classList.remove('active');},3000);}}; recognition.onerror=(e)=>{if(e.error==='no-speech'||e.error==='aborted')return;}; }
+function startListening() { if(!recognition) return; try{recognition.start();}catch(e){} }
+function stopListening() { if(!recognition) return; try{recognition.stop();}catch(e){} }
+function processCurhat(text) { const l=text.toLowerCase();let m=null;if(l.match(/marah|kesel|benci|sial|jengkel/))m='angry';else if(l.match(/sedih|nangis|galau|sepi/))m='sad';else if(l.match(/senang|bahagia|syukur|haha/))m='happy';if(m){setEmotion(m);if(state.sessionActive)state.sessionXP+=12;} }
+
+function addXP(amount) { state.xp += amount; while(state.xp >= state.xpToNext){state.xp-=state.xpToNext;state.petLevel++;state.xpToNext=state.petLevel*20;showToast(`Level up! Level ${state.petLevel}`, '⬆️');const e=PET_EVOLUTION[state.petLevel];if(e)showToast(`Evolusi! ${e}`, '✨');} saveState(); updateUI(); }
+function updateUI() { petLevelEl.textContent=state.petLevel; xpBar.style.width=(state.xp/state.xpToNext*100)+'%'; petAvatar.textContent=PET_EVOLUTION[state.petLevel]||'🥚'; }
+function buildExprBars() { const o=['happy','neutral','sad','angry']; exprBars.innerHTML=o.map(em=>{const c=EMOTIONS[em];return `<div class="expr-row"><span class="expr-icon">${c.icon}</span><span class="expr-label">${c.label}</span><div class="expr-bar-track"><div class="expr-bar-fill" data-emotion="${em}" style="background:${c.color};width:0%"></div></div><span class="expr-pct" data-emotion="${em}">0%</span></div>`;}).join(''); }
+
+function initParticles() { resizeParticleCanvas(); window.addEventListener('resize', resizeParticleCanvas); for(let i=0;i<25;i++)particles.push(createParticle()); animateParticles(); }
+function resizeParticleCanvas() { const r=$('pageCurhat').getBoundingClientRect(); pCanvas.width=r.width; pCanvas.height=r.height; }
+function createParticle(burst=false) { const w=pCanvas.width||400,h=pCanvas.height||800; return {x:Math.random()*w,y:burst?h*0.35:h+Math.random()*40,vx:(Math.random()-0.5)*(burst?3:0.4),vy:-(Math.random()*(burst?3.5:1)+0.3),r:Math.random()*2.5+1,opacity:Math.random()*0.3+0.2,color:EMOTIONS[state.currentEmotion].color,life:1}; }
+function burstParticles(color,count) { for(let i=0;i<count;i++){const p=createParticle(true);p.color=color;p.opacity=0.5;p.r=Math.random()*3.5+1;particles.push(p);} }
+function animateParticles() { pCtx.clearRect(0,0,pCanvas.width,pCanvas.height); const tc=EMOTIONS[state.currentEmotion].color; for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life-=0.003;p.opacity*=0.997;p.color=tc;if(p.life<=0||p.opacity<0.02||p.y<-20){particles[i]=createParticle();particles[i].color=tc;continue;} pCtx.beginPath();pCtx.arc(p.x,p.y,Math.max(0.1,p.r*2.5),0,Math.PI*2);pCtx.fillStyle=p.color;pCtx.globalAlpha=Math.max(0,p.opacity*p.life*0.12);pCtx.fill(); pCtx.beginPath();pCtx.arc(p.x,p.y,Math.max(0.1,p.r),0,Math.PI*2);pCtx.fillStyle=p.color;pCtx.globalAlpha=Math.max(0,p.opacity*p.life);pCtx.fill();} pCtx.globalAlpha=1;if(particles.length>70)particles.splice(0,particles.length-50);requestAnimationFrame(animateParticles); }
+
+function dismissOverlay(id) { $(id).classList.remove('active'); }
+function showToast(message, icon='💬') { const c=$('toastContainer');const t=document.createElement('div');t.className='toast';t.innerHTML=`<span>${icon}</span><span>${message}</span>`;c.appendChild(t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3000); }
+
+init();
+</script>
+</body>
+</html>
