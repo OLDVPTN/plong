@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmoPet - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root { --bg: #0D0D12; --card: rgba(22, 22, 30, 0.85); --accent: #FF6B35; --accent2: #00C9A7; --danger: #FF4757; --text: #F0EDE6; --dim: #5A5E6B; --border: rgba(255,255,255,0.06); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Outfit', sans-serif; background: #050508; color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        .app { width: 100%; max-width: 420px; height: 100vh; max-height: 860px; background: var(--bg); position: relative; display: flex; flex-direction: column; overflow: hidden; }
+        @media (min-width: 480px) { .app { height: 92vh; border-radius: 28px; border: 1px solid var(--border); box-shadow: 0 0 80px rgba(0,0,0,0.6); } }
+
+        header { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.25); flex-shrink: 0; z-index: 10; }
+        .logo { font-weight: 800; font-size: 1.15rem; letter-spacing: 1.5px; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-right { display: flex; align-items: center; gap: 15px; }
+        .header-title { font-size: 0.9rem; font-weight: 600; color: var(--dim); }
+        .logout-btn { background: none; border: 1px solid var(--border); color: var(--dim); padding: 6px 12px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 0.75rem; cursor: pointer; transition: 0.3s; }
+        .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+        .main-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; position: relative; padding-bottom: 70px; }
+        .main-scroll::-webkit-scrollbar { width: 0; }
+        .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; height: 65px; background: rgba(13,13,18,0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 20; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--dim); cursor: pointer; transition: color 0.3s; background: none; border: none; font-family: 'Outfit', sans-serif; font-size: 0.7rem; font-weight: 600; text-decoration: none; }
+        .nav-item i { font-size: 1.2rem; } .nav-item.active { color: var(--accent); }
+
+        .dash-container { padding: 20px; position: relative; z-index: 2; }
+        .profile-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 30px 24px; text-align: center; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .profile-pet { font-size: 80px; margin-bottom: 10px; display: block; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .profile-level { font-size: 1.4rem; font-weight: 900; margin-bottom: 6px; }
+        .profile-xp-text { font-size: 0.8rem; color: var(--dim); margin-bottom: 12px; }
+        .profile-xp-track { width: 100%; height: 10px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; }
+        .profile-xp-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.5s; }
+        .section-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--dim); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .section-title i { font-size: 0.9rem; color: var(--accent); }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+        .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-header { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; }
+        .stat-bar-track { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 99px; overflow: hidden; }
+        .stat-bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease-out; }
+        .stat-value { font-size: 0.75rem; color: var(--dim); font-weight: 600; }
+        .history-list { display: flex; flex-direction: column; gap: 10px; }
+        .history-item { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+        .history-mood-icon { font-size: 1.4rem; width: 44px; height: 44px; background: rgba(255,255,255,0.04); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .history-info { flex: 1; } .history-mood-label { font-size: 0.9rem; font-weight: 700; margin-bottom: 2px; } .history-time { font-size: 0.7rem; color: var(--dim); }
+        .history-xp { font-size: 0.9rem; font-weight: 800; color: var(--accent2); }
+        .empty-state { text-align: center; color: var(--dim); font-size: 0.85rem; padding: 40px 0; opacity: 0.5; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <header>
+        <div class="logo">EmoPet.</div>
+        <div class="header-right">
+            <div class="header-title" id="welcomeUser">Halo, User</div>
+            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Keluar</button>
+        </div>
+    </header>
+
+    <div class="main-scroll">
+        <div class="dash-container">
+            <div class="profile-card">
+                <span class="profile-pet" id="dashPetAvatar">🥚</span>
+                <div class="profile-level">Level <span id="dashLevel">1</span></div>
+                <div class="profile-xp-text"><span id="dashXpText">0 / 20 XP</span></div>
+                <div class="profile-xp-track"><div class="profile-xp-fill" id="dashXpBar" style="width: 0%"></div></div>
+            </div>
+
+            <div class="section-title"><i class="fas fa-heart-pulse"></i> Parameter Pet</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header" style="color: #FFD93D;"><i class="fas fa-sun"></i> Kebahagiaan</div>
+                    <div class="stat-bar-track"><div class="stat-bar-fill" id="statHappy" style="background: #FFD93D; width: 0%"></div></div>
+                    <div class="stat-value" id="statHappyVal">0 poin</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header" style="color: #4ECDC4;"><i class="fas fa-cloud-rain"></i> Kesanangan</div>
+                    <div class="stat-bar-track"><div class="stat-bar-fill" id="statSad" style="background: #4ECDC4; width: 0%"></div></div>
+                    <div class="stat-value" id="statSadVal">0 poin</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header" style="color: #FF4757;"><i class="fas fa-fire"></i> Kemarahan</div>
+                    <div class="stat-bar-track"><div class="stat-bar-fill" id="statAngry" style="background: #FF4757; width: 0%"></div></div>
+                    <div class="stat-value" id="statAngryVal">0 poin</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header" style="color: #6B7280;"><i class="fas fa-balance-scale"></i> Kestabilan</div>
+                    <div class="stat-bar-track"><div class="stat-bar-fill" id="statNeutral" style="background: #6B7280; width: 0%"></div></div>
+                    <div class="stat-value" id="statNeutralVal">0 poin</div>
+                </div>
+            </div>
+
+            <div class="section-title"><i class="fas fa-clock-rotate-left"></i> Riwayat Curhat</div>
+            <div class="history-list" id="historyList">
+                <div class="empty-state">Belum ada riwayat curhat</div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a class="nav-item" href="index.html"><i class="fas fa-video"></i> Curhat</a>
+        <a class="nav-item active" href="dashboard.html"><i class="fas fa-chart-line"></i> Dashboard</a>
+        <button class="nav-item" style="visibility: hidden;"><i class="fas fa-video-slash"></i> Mulai</button>
+    </nav>
+</div>
+
+<script>
+    // AUTH GUARD
+    const currentUser = localStorage.getItem('emopet_current_user');
+    if (!currentUser) { window.location.href = 'auth.html'; }
+
+    // LOGOUT
+    function logout() { localStorage.removeItem('emopet_current_user'); window.location.href = '/auth'; }
+
+    const PET_EVOLUTION = { 1: '🥚', 2: '🐣', 3: '🐥', 5: '🐤', 8: '🦆', 12: '🦅', 16: '🐉' };
+    const EMOTIONS = { neutral: { icon: '😐', label: 'Netral', color: '#6B7280' }, happy: { icon: '😊', label: 'Senang', color: '#FFD93D' }, sad: { icon: '😢', label: 'Sedih', color: '#4ECDC4' }, angry: { icon: '😠', label: 'Marah', color: '#FF4757' } };
+
+    // STATE MANAGEMENT TERHUBUNG KE USER SPESIFIK
+    function loadState() {
+        const users = JSON.parse(localStorage.getItem('emopet_users') || '[]');
+        const user = users.find(u => u.username === currentUser);
+        if (user && user.data) return user.data;
+        return { petLevel: 1, xp: 0, xpToNext: 20, totalStats: { happy: 0, sad: 0, angry: 0, neutral: 0 }, history: [] };
+    }
+
+    function renderDashboard() {
+        const data = loadState();
+        document.getElementById('welcomeUser').textContent = `Halo, ${currentUser}`;
+
+        document.getElementById('dashPetAvatar').textContent = PET_EVOLUTION[data.petLevel] || '🥚';
+        document.getElementById('dashLevel').textContent = data.petLevel;
+        document.getElementById('dashXpText').textContent = `${data.xp} / ${data.xpToNext} XP`;
+        document.getElementById('dashXpBar').style.width = (data.xp / data.xpToNext * 100) + '%';
+
+        const maxStat = 50; 
+        ['happy', 'sad', 'angry', 'neutral'].forEach(e => {
+            const val = (data.totalStats && data.totalStats[e]) || 0;
+            document.getElementById(`stat${e.charAt(0).toUpperCase() + e.slice(1)}`).style.width = Math.min(100, (val / maxStat) * 100) + '%';
+            document.getElementById(`stat${e.charAt(0).toUpperCase() + e.slice(1)}Val`).textContent = val + ' poin';
+        });
+
+        const list = document.getElementById('historyList');
+        if (!data.history || data.history.length === 0) {
+            list.innerHTML = '<div class="empty-state">Belum ada riwayat curhat</div>';
+        } else {
+            list.innerHTML = data.history.map(h => {
+                const cfg = EMOTIONS[h.dominantMood] || EMOTIONS.neutral;
+                const date = new Date(h.date);
+                const timeStr = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + ', ' + date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                const mins = Math.floor(h.duration / 60); const secs = h.duration % 60;
+                return `<div class="history-item">
+                    <div class="history-mood-icon" style="color:${cfg.color}">${cfg.icon}</div>
+                    <div class="history-info">
+                        <div class="history-mood-label" style="color:${cfg.color}">${cfg.label}</div>
+                        <div class="history-time">${timeStr} • ${mins}m ${secs}s</div>
+                    </div>
+                    <div class="history-xp">+${h.xp} XP</div>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    window.onload = renderDashboard;
+</script>
+</body>
+</html>
