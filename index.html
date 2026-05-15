@@ -199,7 +199,7 @@
 
     <header>
         <a href="dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <div class="logo">Plong By Poko Group</div>
+        <div class="logo">{ptname} By Poko Group</div>
         <div class="header-spacer"></div>
     </header>
 
@@ -217,7 +217,7 @@
             </div>
 
             <div class="tone-indicator">
-                Deteksi Tone Suara
+                {lang.dtone}
                 <div class="tone-bars">
                     <div class="tone-bar-item">Volume<div class="tone-bar-track"><div class="tone-bar-fill" id="toneVol" style="background: var(--accent);"></div></div></div>
                     <div class="tone-bar-item">Pitch<div class="tone-bar-track"><div class="tone-bar-fill" id="tonePitch" style="background: var(--accent2);"></div></div></div>
@@ -234,7 +234,7 @@
         </section>
 
         <section class="expr-section">
-            <h3>Emosi Terdeteksi</h3>
+            <h3>{lang.emotional}</h3>
             <div id="exprBars"></div>
         </section>
     </div>
