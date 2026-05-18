@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Plong By Poko Group</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #F9FAFB; --card: #FFFFFF; --accent: #FF6B35; --accent2: #00C9A7; --danger: #EF5350;
+            --warning: #F59E0B; --text: #1F2937; --dim: #6B7280; --border: #E5E7EB; --emotion-color: #6B7280;
+            --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; overflow: hidden; font-family: 'Outfit', sans-serif; background: #E5E7EB; color: var(--text); -webkit-font-smoothing: antialiased; }
+        .app { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; flex-direction: column; overflow: hidden; padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
+        @media (min-width: 480px) { .app { position: relative; top: auto; left: auto; right: auto; bottom: auto; width: 100%; max-width: 420px; height: 92vh; margin: auto; border-radius: 28px; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.08); padding: 0; } body { display: flex; justify-content: center; align-items: center; } }
+
+        /* Loading */
+        .loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; transition: opacity 0.6s, visibility 0.6s; padding: 20px; }
+        .loading-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .load-pet { font-size: 64px; animation: loadBounce 1s ease-in-out infinite; }
+        @keyframes loadBounce { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-12px) scale(1.08); } }
+        .load-bar-track { width: 180px; height: 6px; background: #E5E7EB; border-radius: 99px; overflow: hidden; }
+        .load-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.4s ease; }
+        .load-msg { font-size: 0.82rem; color: var(--dim); text-align: center; }
+
+        /* Header */
+        header { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.9); flex-shrink: 0; z-index: 10; backdrop-filter: blur(10px); }
+        .logo { font-weight: 800; font-size: 0.85rem; letter-spacing: 0.5px; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; white-space: nowrap; }
+        .nav-link { color: var(--dim); text-decoration: none; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: color 0.3s; }
+        .header-btn { background: none; border: none; color: var(--dim); font-size: 0.85rem; cursor: pointer; padding: 4px 8px; border-radius: 8px; transition: 0.2s; }
+        .header-btn:active { background: #F3F4F6; }
+        .header-right { display: flex; align-items: center; gap: 4px; }
+        .ai-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-left: 2px; }
+        .ai-dot.on { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+        .ai-dot.off { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+
+        /* Main scroll */
+        .main-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; position: relative; }
+        #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+
+        /* Camera */
+        .cam-section { padding: 20px 20px 0; position: relative; z-index: 2; }
+        .cam-wrapper { position: relative; width: 100%; aspect-ratio: 4/3; border-radius: 24px; overflow: hidden; background: #E5E7EB; border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.04); }
+        .cam-wrapper video, .cam-wrapper canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .cam-wrapper canvas { z-index: 2; }
+        .cam-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; color: var(--dim); font-size: 0.85rem; z-index: 3; text-align: center; padding: 20px; background: rgba(243, 244, 246, 0.95); }
+        .cam-placeholder i { font-size: 2.5rem; opacity: 0.3; }
+        .cam-action-btn { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5; background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: 99px; font-weight: 700; font-family: 'Outfit', sans-serif; font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 5px 15px rgba(255, 107, 53, 0.3); transition: 0.3s; }
+        .cam-action-btn:active { transform: translateX(-50%) scale(0.95); }
+        .cam-action-btn.stop { background: var(--danger); box-shadow: 0 5px 15px rgba(239, 83, 80, 0.3); }
+        .timer-overlay { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 5; background: rgba(255,255,255,0.9); padding: 6px 16px; border-radius: 99px; display: none; align-items: center; gap: 8px; border: 1px solid rgba(0,0,0,0.05); font-variant-numeric: tabular-nums; color: var(--text); }
+        .timer-overlay.active { display: flex; }
+        .timer-icon { color: var(--danger); font-size: 0.7rem; animation: blink 1s infinite; } @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .timer-text { font-size: 0.9rem; font-weight: 700; letter-spacing: 1px; }
+        .timer-target { font-size: 0.7rem; color: var(--dim); }
+        .timer-check { color: var(--accent2); font-size: 0.8rem; margin-left: 4px; display: none; } .timer-check.show { display: inline; }
+        .liveness-badge { position: absolute; bottom: 12px; right: 12px; z-index: 4; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: 600; display: none; align-items: center; gap: 5px; border: 1px solid rgba(0,0,0,0.05); color: var(--text); }
+        .liveness-badge.active { display: flex; }
+        .liveness-dot { width: 6px; height: 6px; border-radius: 50%; transition: background 0.3s; }
+
+        /* Tone */
+        .tone-indicator { width: 100%; margin-top: 16px; text-align: center; font-size: 0.72rem; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+        .tone-bars { display: flex; gap: 15px; justify-content: center; margin-top: 6px; }
+        .tone-bar-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.65rem; }
+        .tone-bar-track { width: 90px; height: 6px; background: #E5E7EB; border-radius: 99px; overflow: hidden; }
+        .tone-bar-fill { height: 100%; width: 0%; border-radius: 99px; transition: width 0.1s linear; }
+
+        /* Interim */
+        .interim-bar { width: 100%; margin-top: 10px; background: #F3F4F6; border-radius: 10px; padding: 8px 14px; font-size: 0.8rem; color: var(--dim); font-style: italic; min-height: 36px; display: none; align-items: center; gap: 6px; border: 1px solid var(--border); }
+        .interim-bar.active { display: flex; }
+        .interim-bar i { color: var(--accent); font-size: 0.7rem; animation: blink 0.8s infinite; }
+        .interim-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Chat */
+        .chat-box { width: 100%; margin-top: 16px; background: white; border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 12px; min-height: 120px; max-height: 220px; overflow-y: auto; }
+        .msg-bubble { padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.4; max-width: 85%; word-wrap: break-word; }
+        .msg-user { background: #F3F4F6; color: var(--text); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg-ai { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg-ai.fallback { background: linear-gradient(135deg, #6B7280, #9CA3AF); }
+        .msg-loading { align-self: flex-start; color: var(--dim); font-style: italic; font-size: 13px; background: #F9FAFB; }
+
+        /* Pet */
+        .pet-area { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; padding: 24px 20px 0; }
+        .pet-glow { position: absolute; width: 180px; height: 180px; border-radius: 50%; background: var(--emotion-color); filter: blur(60px); opacity: 0.15; transition: background 0.8s; pointer-events: none; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .pet-avatar { font-size: 70px; position: relative; z-index: 2; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.1)); animation: petBreathe 3s ease-in-out infinite; }
+        @keyframes petBreathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-6px) scale(1.03); } }
+        .pet-avatar.react { animation: petReact 0.5s ease; } @keyframes petReact { 0% { transform: scale(1); } 30% { transform: scale(1.25); } 60% { transform: scale(0.95); } 100% { transform: scale(1); } }
+        .pet-info { text-align: center; margin-top: 8px; }
+        .pet-level { font-size: 0.78rem; font-weight: 600; color: var(--dim); margin-bottom: 4px; }
+        .xp-bar-track { width: 120px; height: 4px; background: #E5E7EB; border-radius: 99px; overflow: hidden; margin: 0 auto; }
+        .xp-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.5s ease; }
+
+        /* Expression bars */
+        .expr-section { padding: 16px 20px 40px; position: relative; z-index: 2; }
+        .expr-section h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--dim); margin-bottom: 10px; }
+        .expr-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .expr-icon { font-size: 0.85rem; width: 24px; text-align: center; }
+        .expr-label { font-size: 0.72rem; color: var(--dim); width: 60px; }
+        .expr-bar-track { flex: 1; height: 6px; background: #E5E7EB; border-radius: 99px; overflow: hidden; }
+        .expr-bar-fill { height: 100%; width: 0%; border-radius: 99px; transition: width 0.35s ease; }
+        .expr-pct { font-size: 0.65rem; color: var(--dim); width: 32px; text-align: right; font-variant-numeric: tabular-nums; }
+
+        /* Overlays */
+        .overlay { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.97); z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .overlay.active { opacity: 1; visibility: visible; }
+        .overlay-icon { font-size: 50px; margin-bottom: 16px; }
+        .overlay h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; color: var(--text); }
+        .overlay p { font-size: 0.85rem; color: var(--dim); line-height: 1.5; margin-bottom: 24px; max-width: 300px; }
+        .overlay-btn { background: var(--text); color: white; border: none; padding: 12px 30px; border-radius: 99px; font-weight: 700; font-family: 'Outfit', sans-serif; font-size: 16px; cursor: pointer; transition: transform 0.2s; }
+        .overlay-btn:active { transform: scale(0.95); }
+        .overlay-btn.secondary { background: var(--border); color: var(--text); margin-bottom: 10px; }
+        .robot-title { color: var(--danger); } .success-title { color: var(--accent2); } .fail-title { color: var(--warning); }
+
+        /* API Key Modal */
+        .key-modal-content { width: 100%; max-width: 340px; }
+        .key-modal-content h2 { font-size: 1.2rem; margin-bottom: 6px; }
+        .key-steps { text-align: left; background: #F3F4F6; border-radius: 12px; padding: 14px; margin-bottom: 20px; font-size: 0.78rem; color: var(--text); line-height: 1.7; }
+        .key-steps ol { padding-left: 18px; }
+        .key-steps a { color: var(--accent); word-break: break-all; }
+        .key-input-wrap { position: relative; margin-bottom: 16px; }
+        .key-input { width: 100%; padding: 12px 44px 12px 14px; border: 2px solid var(--border); border-radius: 12px; font-family: 'Outfit', sans-serif; font-size: 14px; outline: none; transition: border-color 0.3s; background: white; }
+        .key-input:focus { border-color: var(--accent); }
+        .key-input::placeholder { color: #9CA3AF; }
+        .key-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--dim); cursor: pointer; font-size: 14px; padding: 4px; }
+        .key-error { color: var(--danger); font-size: 0.75rem; margin-bottom: 12px; display: none; }
+        .key-error.show { display: block; }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 20px; left: 20px; right: 20px; z-index: 150; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+        .toast { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; opacity: 0; transform: translateY(-10px); transition: all 0.3s; pointer-events: auto; color: var(--text); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .toast.show { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+
+<div class="app" id="app">
+    <!-- Loading -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="load-pet">🥚</div>
+        <div class="load-bar-track"><div class="load-bar-fill" id="loadBar"></div></div>
+        <div class="load-msg" id="loadMsg">Memulai...</div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+    <canvas id="particleCanvas"></canvas>
+
+    <!-- API Key Modal -->
+    <div class="overlay active" id="keyModal">
+        <div class="key-modal-content">
+            <div class="overlay-icon">🔑</div>
+            <h2>Setup Gemini AI</h2>
+            <p>Dapatkan API key gratis dari Google untuk respon AI yang cerdas.</p>
+            <div class="key-steps">
+                <ol>
+                    <li>Buka <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></li>
+                    <li>Login dengan akun Google</li>
+                    <li>Klik "Create API Key"</li>
+                    <li>Copy & paste key di bawah</li>
+                </ol>
+                <p style="margin:8px 0 0;font-size:0.72rem;color:var(--dim);">Gratis: 1500 request/hari. Key disimpan di perangkatmu saja.</p>
+            </div>
+            <div class="key-input-wrap">
+                <input type="password" class="key-input" id="keyInput" placeholder="Paste API key di sini..." autocomplete="off">
+                <button class="key-toggle" id="keyToggle" onclick="toggleKeyVisibility()"><i class="fas fa-eye"></i></button>
+            </div>
+            <div class="key-error" id="keyError">Key tidak valid, coba lagi.</div>
+            <button class="overlay-btn secondary" onclick="skipApiKey()" style="width:100%;">Lewati (pakai respons template)</button>
+            <button class="overlay-btn" onclick="saveApiKey()" style="width:100%;">Simpan & Lanjut</button>
+        </div>
+    </div>
+
+    <!-- Result Overlays -->
+    <div class="overlay" id="robotOverlay">
+        <div class="overlay-icon">🤖</div><h2 class="robot-title">Robot Terdeteksi!</h2>
+        <p>Kamu tidak membuka mulut selama 10 detik.</p>
+        <button class="overlay-btn" onclick="dismissOverlay('robotOverlay')">Mengerti</button>
+    </div>
+    <div class="overlay" id="successOverlay">
+        <div class="overlay-icon">🌟</div><h2 class="success-title">Sesi Selesai!</h2>
+        <p id="successDesc">Kamu curhat selama 1 menit.</p>
+        <button class="overlay-btn" onclick="dismissOverlay('successOverlay')">Lanjut</button>
+    </div>
+    <div class="overlay" id="failOverlay">
+        <div class="overlay-icon">⏱️</div><h2 class="fail-title">Waktu Kurang!</h2>
+        <p>Curhat minimal 1 menit untuk poin.</p>
+        <button class="overlay-btn" onclick="dismissOverlay('failOverlay')">Coba Lagi</button>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <a href="dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Dashboard</a>
+        <div class="logo">Plong By Poko Group</div>
+        <div class="header-right">
+            <button class="header-btn" onclick="openKeyModal()" title="Setting API Key"><i class="fas fa-key"></i></button>
+            <span class="ai-dot off" id="aiDot" title="Status AI"></span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-scroll" id="pageCurhat">
+        <section class="cam-section">
+            <div class="cam-wrapper" id="camWrapper">
+                <video id="camVideo" autoplay playsinline muted></video>
+                <canvas id="camCanvas"></canvas>
+                <div class="cam-placeholder" id="camPlaceholder"><i class="fas fa-video-slash"></i><span>Aktifkan kamera & mic untuk mulai</span></div>
+                <button class="cam-action-btn" id="camActionBtn" onclick="toggleSession()"><i class="fas fa-microphone"></i> Mulai Curhat</button>
+                <div class="timer-overlay" id="timerOverlay"><i class="fas fa-circle timer-icon"></i><span class="timer-text" id="timerText">00:00</span><span class="timer-target">/ 01:00</span><i class="fas fa-check-circle timer-check" id="timerCheck"></i></div>
+                <div class="liveness-badge" id="livenessBadge"><span class="liveness-dot" id="livenessDot" style="background: var(--warning);"></span> <span id="livenessLabel">Diam</span></div>
+            </div>
+
+            <div class="tone-indicator">Deteksi Tone Suara
+                <div class="tone-bars">
+                    <div class="tone-bar-item">Volume<div class="tone-bar-track"><div class="tone-bar-fill" id="toneVol" style="background: var(--accent);"></div></div></div>
+                    <div class="tone-bar-item">Pitch<div class="tone-bar-track"><div class="tone-bar-fill" id="tonePitch" style="background: var(--accent2);"></div></div></div>
+                </div>
+            </div>
+
+            <div class="interim-bar" id="interimBar"><i class="fas fa-circle"></i><span class="interim-text" id="interimText"></span></div>
+
+            <div class="chat-box" id="chatBox">
+                <div class="msg-bubble msg-ai">Hai! Aku Plong pet-mu. Curhat saja padaku, aku mendengarkan.</div>
+            </div>
+        </section>
+
+        <section class="pet-area">
+            <div class="pet-glow" id="petGlow"></div>
+            <div class="pet-avatar" id="petAvatar">🥚</div>
+            <div class="pet-info"><div class="pet-level">Level <span id="petLevel">1</span></div><div class="xp-bar-track"><div class="xp-bar-fill" id="xpBar"></div></div></div>
+        </section>
+
+        <section class="expr-section">
+            <h3>Emosi Terdeteksi</h3>
+            <div id="exprBars"></div>
+        </section>
+    </div>
+</div>
+
+<script>
+// ================================================================
+// KONFIGURASI GEMINI AI
+// ================================================================
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const SYSTEM_PROMPT = `Kamu adalah Plong, hewan virtual empatik dari aplikasi "Plong By Poko Group". Tugasmu mendengarkan curhatan pengguna.
+Pengguna terdeteksi merasa: [EMOTION]. Ucapan mereka: "[TRANSCRIPT]".
+Balas dengan singkat (1-2 kalimat saja), hangat, memvalidasi perasaan mereka. Bahasa Indonesia casual dan alami. Jangan pakai tanda baca berlebihan. Jangan pernah sebut kamu adalah AI atau bahasa model.`;
+
+const EMOTIONS = {
+    neutral: { icon: '😐', label: 'Netral', color: '#6B7280', pet: '🐣' },
+    happy:   { icon: '😊', label: 'Senang', color: '#FF6B35', pet: '🌞' },
+    sad:     { icon: '😢', label: 'Sedih',  color: '#00C9A7', pet: '🌧️' },
+    angry:   { icon: '😠', label: 'Marah',  color: '#EF5350', pet: '🔥' }
+};
+const PET_EVOLUTION = { 1:'🥚', 2:'🐣', 3:'🐥', 5:'🐤', 8:'🦆', 12:'🦅', 16:'🐉' };
+
+// ================================================================
+// STATE
+// ================================================================
+let state = {
+    petLevel:1, xp:0, xpToNext:20,
+    totalStats:{happy:0,sad:0,angry:0,neutral:0},
+    history:[],
+    sessionActive:false, sessionStartTime:0,
+    lastMouthMoveTime:0, lastXpTime:0, lastToneCheck:0,
+    sessionXP:0,
+    sessionMoodCounts:{happy:0,sad:0,angry:0,neutral:0},
+    minDurationMs:60000, robotTimeoutMs:10000,
+    currentEmotion:'neutral', lastAiCall:0,
+    geminiKey: ''
+};
+
+// ================================================================
+// DOM
+// ================================================================
+const $=id=>document.getElementById(id);
+const camVideo=$('camVideo'), camCanvas=$('camCanvas'), camPlaceholder=$('camPlaceholder');
+const timerOverlay=$('timerOverlay'), timerText=$('timerText'), timerCheck=$('timerCheck');
+const chatBox=$('chatBox');
+const petAvatar=$('petAvatar'), petGlow=$('petGlow'), petLevelEl=$('petLevel'), xpBar=$('xpBar');
+const exprBars=$('exprBars'), pCanvas=$('particleCanvas'), pCtx=pCanvas.getContext('2d');
+const camActionBtn=$('camActionBtn');
+const interimBar=$('interimBar'), interimText=$('interimText');
+const aiDot=$('aiDot');
+
+let recognition=null, particles=[], detectionInterval=null, cameraStream=null, tickInterval=null;
+let currentArousal='neutral';
+let audioContext, analyser, microphone, dataArray, bufferLength;
+let faceApiReady=false, interimTimeout=null;
+
+// ================================================================
+// AUTH CHECK
+// ================================================================
+const currentUser = localStorage.getItem('emopet_current_user');
+if (!currentUser) { window.location.href = 'auth.html'; }
+
+function loadState() {
+    try {
+        const users = JSON.parse(localStorage.getItem('emopet_users')||'[]');
+        const user = users.find(u => u.username === currentUser);
+        if (user && user.data) {
+            state.petLevel=user.data.petLevel||1; state.xp=user.data.xp||0;
+            state.xpToNext=user.data.xpToNext||20;
+            state.totalStats=user.data.totalStats||{happy:0,sad:0,angry:0,neutral:0};
+            state.history=user.data.history||[];
+        }
+    } catch(e){}
+}
+function saveState() {
+    try {
+        let users = JSON.parse(localStorage.getItem('emopet_users')||'[]');
+        const idx = users.findIndex(u => u.username === currentUser);
+        if (idx !== -1) {
+            users[idx].data = { petLevel:state.petLevel, xp:state.xp, xpToNext:state.xpToNext, totalStats:state.totalStats, history:state.history };
+            localStorage.setItem('emopet_users', JSON.stringify(users));
+        }
+    } catch(e){}
+}
+
+// ================================================================
+// API KEY MANAGEMENT
+// ================================================================
+function getKey() {
+    return localStorage.getItem('plong_gemini_key') || '';
+}
+function setKey(key) {
+    localStorage.setItem('plong_gemini_key', key);
+    state.geminiKey = key;
+    updateAiDot();
+}
+
+function updateAiDot() {
+    const has = !!getKey();
+    aiDot.className = 'ai-dot ' + (has ? 'on' : 'off');
+}
+
+function toggleKeyVisibility() {
+    const inp = $('keyInput');
+    const isPass = inp.type === 'password';
+    inp.type = isPass ? 'text' : 'password';
+    $('keyToggle').innerHTML = isPass ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+}
+
+function openKeyModal() {
+    const key = getKey();
+    $('keyInput').value = key || '';
+    $('keyError').classList.remove('show');
+    $('keyModal').classList.add('active');
+}
+
+function skipApiKey() {
+    setKey('');
+    dismissOverlay('keyModal');
+    showToast('Mode template aktif (tanpa AI)', '⚡');
+    finishInit();
+}
+
+async function saveApiKey() {
+    const key = $('keyInput').value.trim();
+    if (!key) { $('keyError').textContent='Key tidak boleh kosong.'; $('keyError').classList.add('show'); return; }
+
+    $('keyError').classList.remove('show');
+    $('keyError').textContent='Menguji koneksi...';
+    $('keyError').classList.add('show');
+    $('keyError').style.color='var(--dim)';
+
+    const valid = await testGeminiKey(key);
+
+    $('keyError').style.color='';
+
+    if (valid) {
+        setKey(key);
+        dismissOverlay('keyModal');
+        showToast('Gemini AI terhubung!', '✅');
+        finishInit();
+    } else {
+        $('keyError').textContent='Key tidak valid atau koneksi gagal. Coba lagi.';
+        $('keyError').classList.add('show');
+    }
+}
+
+async function testGeminiKey(key) {
+    try {
+        const resp = await fetch(`${GEMINI_URL}?key=${key}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: 'Halo, jawab 1 kata saja.' }] }],
+                generationConfig: { maxOutputTokens: 10 }
+            })
+        });
+        if (!resp.ok) return false;
+        const data = await resp.json();
+        return !!(data.candidates && data.candidates[0]);
+    } catch(e) { return false; }
+}
+
+// ================================================================
+// INIT
+// ================================================================
+async function init() {
+    loadState();
+    updateUI();
+    buildExprBars();
+    initParticles();
+    updateAiDot();
+
+    // Load face-api
+    try {
+        $('loadMsg').textContent = 'Memuat deteksi wajah...';
+        $('loadBar').style.width = '10%';
+        await loadScript('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js');
+        $('loadMsg').textContent = 'Download model...';
+        $('loadBar').style.width = '30%';
+        await Promise.race([
+            Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/'),
+                faceapi.nets.faceLandmark68TinyNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/')
+            ]),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))
+        ]);
+        faceApiReady = true;
+        $('loadBar').style.width = '60%';
+    } catch(e) {
+        console.warn('Face-api skip:', e.message);
+        faceApiReady = false;
+    }
+
+    setupSpeechRecognition();
+
+    // Preload voices
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
+
+    $('loadBar').style.width = '80%';
+    $('loadMsg').textContent = 'Siap...';
+
+    // Cek apakah sudah punya key
+    if (getKey()) {
+        dismissOverlay('keyModal');
+        finishInit();
+    }
+    // Kalau belum punya key, modal sudah tampil (default active), tunggu user input
+}
+
+function finishInit() {
+    $('loadBar').style.width = '100%';
+    $('loadMsg').textContent = getKey() ? 'Siap dengan Gemini AI!' : 'Siap (mode template)';
+    setTimeout(() => $('loadingOverlay').classList.add('hidden'), 400);
+    showToast('Halo, ' + currentUser + '!', '👋');
+    if (!getKey()) {
+        setTimeout(() => showToast('Klik 🔑 untuk setup AI', '💡'), 1500);
+    }
+}
+
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        if (typeof faceapi !== 'undefined') { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('fail'));
+        document.head.appendChild(s);
+    });
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+window.addEventListener('beforeunload', () => { if(state.sessionActive) stopStreams(); });
+
+// ================================================================
+// SESI
+// ================================================================
+async function toggleSession() {
+    if (state.sessionActive) endSession(false);
+    else await startSession();
+}
+
+async function startSession() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode:'user', width:{ideal:320}, height:{ideal:240} },
+            audio: true
+        });
+        cameraStream = stream;
+        camVideo.srcObject = stream;
+        await camVideo.play();
+
+        state.sessionActive = true;
+        state.sessionXP = 0;
+        state.sessionMoodCounts = {happy:0,sad:0,angry:0,neutral:0};
+        state.sessionStartTime = Date.now();
+        state.lastMouthMoveTime = Date.now();
+        state.lastXpTime = Date.now();
+        state.lastToneCheck = Date.now();
+        state.currentEmotion = 'neutral';
+
+        camPlaceholder.style.display = 'none';
+        timerOverlay.classList.add('active');
+        $('livenessBadge').classList.add('active');
+        camActionBtn.innerHTML = '<i class="fas fa-stop"></i> Stop';
+        camActionBtn.classList.add('stop');
+        camCanvas.width = camVideo.videoWidth||320;
+        camCanvas.height = camVideo.videoHeight||240;
+
+        if (faceApiReady) startFaceDetection();
+        startAudioAnalysis(stream);
+
+        if (recognition) { try { recognition.start(); } catch(e) { showToast('Speech recognition tidak tersedia','⚠️'); } }
+        else { showToast('Browser tidak support speech recognition','⚠️'); }
+
+        startTick();
+        showToast('Sesi dimulai — curhat saja!','🎙️');
+    } catch(err) {
+        console.error(err);
+        showToast('Izinkan akses kamera & mikrofon','⚠️');
+    }
+}
+
+function stopStreams() {
+    if (cameraStream) { cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+    camVideo.srcObject = null;
+    const ctx = camCanvas.getContext('2d'); ctx.clearRect(0,0,camCanvas.width,camCanvas.height);
+    if (detectionInterval) { clearInterval(detectionInterval); detectionInterval=null; }
+    if (audioContext && audioContext.state!=='closed') { try{audioContext.close();}catch(e){} audioContext=null; }
+    if (recognition) { try{recognition.stop();}catch(e){} }
+    window.speechSynthesis.cancel();
+    interimBar.classList.remove('active');
+    if (interimTimeout) { clearTimeout(interimTimeout); interimTimeout=null; }
+}
+
+function endSession(isRobot=false) {
+    const duration = Date.now() - state.sessionStartTime;
+    stopStreams();
+    state.sessionActive = false;
+    camPlaceholder.style.display='flex';
+    timerOverlay.classList.remove('active');
+    $('livenessBadge').classList.remove('active');
+    camActionBtn.innerHTML='<i class="fas fa-microphone"></i> Mulai Curhat';
+    camActionBtn.classList.remove('stop');
+    $('toneVol').style.width='0%'; $('tonePitch').style.width='0%';
+    timerText.style.color='var(--text)';
+    document.querySelectorAll('.expr-bar-fill').forEach(b=>b.style.width='0%');
+    document.querySelectorAll('.expr-pct').forEach(p=>p.textContent='0');
+
+    let dominantMood='neutral', maxCount=0;
+    for (const [mood,count] of Object.entries(state.sessionMoodCounts)) { if(count>maxCount){maxCount=count;dominantMood=mood;} }
+
+    if (isRobot) { $('robotOverlay').classList.add('active'); state.sessionXP=0; }
+    else if (duration < state.minDurationMs) { $('failOverlay').classList.add('active'); state.sessionXP=0; }
+    else {
+        bankSessionXP(duration, dominantMood);
+        const mins=Math.floor(duration/60000), secs=Math.floor((duration%60000)/1000);
+        $('successDesc').textContent=`Kamu curhat selama ${mins}m ${secs}s. Pet mendapat ${state.sessionXP} poin!`;
+        $('successOverlay').classList.add('active');
+    }
+    chatBox.innerHTML='<div class="msg-bubble msg-ai">Sesi selesai. Terima kasih sudah curhat!</div>';
+}
+
+function bankSessionXP(duration, dominantMood) {
+    for (const [mood,count] of Object.entries(state.sessionMoodCounts)) { state.totalStats[mood]=(state.totalStats[mood]||0)+count; }
+    addXP(state.sessionXP);
+    state.history.unshift({ date:new Date().toISOString(), duration:Math.round(duration/1000), xp:state.sessionXP, dominantMood });
+    if (state.history.length>20) state.history.pop();
+    saveState(); state.sessionXP=0;
+}
+
+// ================================================================
+// TICK
+// ================================================================
+function startTick() {
+    if (tickInterval) clearInterval(tickInterval);
+    tickInterval = setInterval(() => {
+        if (!state.sessionActive) return;
+        const now = Date.now(), elapsed = now - state.sessionStartTime;
+        const mins = Math.floor(elapsed/60000), secs = Math.floor((elapsed%60000)/1000);
+        timerText.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+        if (elapsed >= state.minDurationMs) { timerCheck.classList.add('show'); timerText.style.color='var(--accent2)'; }
+        else { timerCheck.classList.remove('show'); timerText.style.color='var(--text)'; }
+        if (now - state.lastMouthMoveTime > state.robotTimeoutMs) { endSession(true); return; }
+        if (now - state.lastToneCheck > 3000) { state.lastToneCheck=now; if(currentArousal==='high') processEmotionFromTone('angry'); else if(currentArousal==='low') processEmotionFromTone('sad'); else processEmotionFromTone('neutral'); }
+        if (now - state.lastXpTime > 4000) { state.lastXpTime=now; state.sessionXP+=2; state.sessionMoodCounts[state.currentEmotion]++; updateExprBar(state.currentEmotion); }
+    }, 1000);
+}
+
+// ================================================================
+// XP & UI
+// ================================================================
+function addXP(amount) {
+    state.xp += amount;
+    while (state.xp >= state.xpToNext) {
+        state.xp -= state.xpToNext; state.petLevel++; state.xpToNext = state.petLevel*20;
+        showToast(`Level up! Level ${state.petLevel}`, '⬆️');
+        const e = PET_EVOLUTION[state.petLevel];
+        if (e) setTimeout(()=>showToast(`Evolusi! ${e}`,'✨'), 600);
+    }
+    saveState(); updateUI();
+}
+function updateUI() { petLevelEl.textContent=state.petLevel; xpBar.style.width=(state.xp/state.xpToNext*100)+'%'; petAvatar.textContent=PET_EVOLUTION[state.petLevel]||'🥚'; }
+function buildExprBars() { const o=['happy','neutral','sad','angry']; exprBars.innerHTML=o.map(em=>{const c=EMOTIONS[em];return `<div class="expr-row"><span class="expr-icon">${c.icon}</span><span class="expr-label">${c.label}</span><div class="expr-bar-track"><div class="expr-bar-fill" data-emotion="${em}" style="background:${c.color};width:0%"></div></div><span class="expr-pct" data-emotion="${em}">0</span></div>`;}).join(''); }
+function updateExprBar(emotion) { const bar=document.querySelector(`.expr-bar-fill[data-emotion="${emotion}"]`); const pct=document.querySelector(`.expr-pct[data-emotion="${emotion}"]`); if(bar)bar.style.width=Math.min(100,state.sessionMoodCounts[emotion]*5)+'%'; if(pct)pct.textContent=state.sessionMoodCounts[emotion]; }
+
+// ================================================================
+// FACE DETECTION
+// ================================================================
+function startFaceDetection() {
+    if (!faceApiReady) return;
+    if (detectionInterval) clearInterval(detectionInterval);
+    detectionInterval = setInterval(async () => {
+        if (!state.sessionActive||!faceApiReady) return;
+        try {
+            const det = await faceapi.detectSingleFace(camVideo, new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.4})).withFaceLandmarks(true);
+            const ctx = camCanvas.getContext('2d'); ctx.clearRect(0,0,camCanvas.width,camCanvas.height);
+            if (det) {
+                const box=det.detection.box, sx=camCanvas.width/camVideo.videoWidth, sy=camCanvas.height/camVideo.videoHeight;
+                ctx.strokeStyle=EMOTIONS[state.currentEmotion].color; ctx.lineWidth=2; ctx.setLineDash([6,4]);
+                ctx.strokeRect(box.x*sx,box.y*sy,box.width*sx,box.height*sy); ctx.setLineDash([]);
+                const mouth=det.landmarks.getMouth();
+                if (mouth.length>10) {
+                    const dist=Math.abs(mouth[13].y-mouth[19].y), ratio=dist/box.height;
+                    if (ratio>0.12) { state.lastMouthMoveTime=Date.now(); $('livenessDot').style.background='var(--accent2)'; $('livenessLabel').textContent='Bicara'; }
+                    else { $('livenessDot').style.background='var(--warning)'; $('livenessLabel').textContent='Diam'; }
+                }
+            } else { $('livenessLabel').textContent='Wajah?'; }
+        } catch(e){}
+    }, 300);
+}
+
+// ================================================================
+// AUDIO ANALYSIS
+// ================================================================
+function startAudioAnalysis(stream) {
+    try {
+        audioContext=new(window.AudioContext||window.webkitAudioContext)();
+        analyser=audioContext.createAnalyser();
+        microphone=audioContext.createMediaStreamSource(stream);
+        microphone.connect(analyser);
+        analyser.fftSize=2048; bufferLength=analyser.fftSize;
+        dataArray=new Float32Array(bufferLength);
+        drawToneIndicator();
+    } catch(e){ console.warn('Audio err:',e); }
+}
+
+function drawToneIndicator() {
+    if (!state.sessionActive||!analyser) return;
+    requestAnimationFrame(drawToneIndicator);
+    analyser.getFloatTimeDomainData(dataArray);
+    let sum=0; for(let i=0;i<bufferLength;i++) sum+=dataArray[i]*dataArray[i];
+    let rms=Math.sqrt(sum/bufferLength);
+    let volPct=Math.min(100,rms*250);
+    let pitch=autoCorrelate(dataArray,audioContext.sampleRate);
+    let pitchPct=0; if(pitch!==-1) pitchPct=Math.min(100,Math.max(0,((pitch-80)/300)*100));
+    $('toneVol').style.width=volPct+'%'; $('tonePitch').style.width=pitchPct+'%';
+    if (rms>0.04) state.lastMouthMoveTime=Date.now();
+    if (rms<0.01) currentArousal='neutral';
+    else if (rms>0.06&&pitch>180) currentArousal='high';
+    else if (rms<0.04&&pitch!==-1&&pitch<160) currentArousal='low';
+    else currentArousal='neutral';
+}
+
+function autoCorrelate(buf,sr) {
+    let SIZE=buf.length, rms=0;
+    for(let i=0;i<SIZE;i++) rms+=buf[i]*buf[i];
+    rms=Math.sqrt(rms/SIZE); if(rms<0.01) return -1;
+    let r1=0,r2=SIZE-1,th=0.2;
+    for(let i=0;i<SIZE/2;i++) if(Math.abs(buf[i])<th){r1=i;break;}
+    for(let i=1;i<SIZE/2;i++) if(Math.abs(buf[SIZE-i])<th){r2=SIZE-i;break;}
+    let tr=buf.slice(r1,r2), ts=tr.length; if(ts<10) return -1;
+    let c=new Array(ts).fill(0);
+    for(let i=0;i<ts;i++) for(let j=0;j<ts-i;j++) c[i]+=tr[j]*tr[j+i];
+    let d=0; while(d<ts-1&&c[d]>c[d+1]) d++;
+    let mx=-1,mp=-1;
+    for(let i=d;i<ts;i++) if(c[i]>mx){mx=c[i];mp=i;}
+    return mp>0?sr/mp:-1;
+}
+
+// ================================================================
+// SPEECH RECOGNITION
+// ================================================================
+function setupSpeechRecognition() {
+    const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+    if (!SR) return;
+    recognition = new SR();
+    recognition.lang='id-ID'; recognition.continuous=true; recognition.interimResults=true; recognition.maxAlternatives=1;
+
+    recognition.onresult = (event) => {
+        let interim='', final_='';
+        for (let i=event.resultIndex; i<event.results.length; ++i) {
+            const t = event.results[i][0].transcript;
+            if (event.results[i].isFinal) final_ += t;
+            else interim += t;
+        }
+        if (interim) {
+            interimText.textContent = interim;
+            interimBar.classList.add('active');
+            if (interimTimeout) clearTimeout(interimTimeout);
+            interimTimeout = setTimeout(()=>interimBar.classList.remove('active'), 2000);
+        }
+        if (final_.trim()) {
+            interimBar.classList.remove('active');
+            processCurhat(final_);
+            addChatBubble(final_, 'user');
+            callGemini(final_, state.currentEmotion);
+        }
+    };
+
+    recognition.onend = () => {
+        if (state.sessionActive) {
+            setTimeout(()=>{ if(state.sessionActive&&recognition){ try{recognition.start();}catch(e){} } }, 200);
+        }
+    };
+    recognition.onerror = (e) => { if(e.error==='no-speech'||e.error==='aborted') return; };
+}
+
+// ================================================================
+// EMOSI
+// ================================================================
+function processCurhat(text) {
+    const l=text.toLowerCase();
+    if (l.match(/marah|kesel|benci|sial|jengkel|geram|sebel/)) setEmotion('angry');
+    else if (l.match(/sedih|nangis|galau|sepi|lelah|capek|kecewa|menyesal/)) setEmotion('sad');
+    else if (l.match(/senang|bahagia|syukur|haha|wkwk|mantap|keren|hebat/)) setEmotion('happy');
+}
+function processEmotionFromTone(a) { if(a==='high') setEmotion('angry'); else if(a==='low') setEmotion('sad'); else setEmotion('neutral'); }
+
+function setEmotion(emotion) {
+    if (state.currentEmotion===emotion) return;
+    const cfg=EMOTIONS[emotion]; if(!cfg) return;
+    state.currentEmotion=emotion;
+    document.documentElement.style.setProperty('--emotion-color', cfg.color);
+    petAvatar.textContent = state.petLevel>=3 ? cfg.pet : (PET_EVOLUTION[state.petLevel]||cfg.pet);
+    petAvatar.classList.remove('react'); void petAvatar.offsetWidth; petAvatar.classList.add('react');
+    petGlow.style.background=cfg.color; petGlow.style.opacity='0.15';
+    burstParticles(cfg.color, 8);
+}
+
+// ================================================================
+// GEMINI AI CALL
+// ================================================================
+function addChatBubble(text, sender, isFallback=false) {
+    const b = document.createElement('div');
+    b.className = `msg-bubble msg-${sender}${isFallback?' fallback':''}`;
+    b.textContent = text;
+    chatBox.appendChild(b);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+async function callGemini(transcript, emotion) {
+    const now = Date.now();
+    if (now - state.lastAiCall < 5000) return;
+    state.lastAiCall = now;
+
+    const key = getKey();
+
+    // Loading bubble
+    const lb = document.createElement('div');
+    lb.className = 'msg-bubble msg-ai msg-loading';
+    lb.textContent = key ? 'Plong berpikir...' : 'Plong merespon...';
+    chatBox.appendChild(lb);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    if (!key) {
+        // Mode fallback tanpa API key
+        lb.remove();
+        const fb = getFallbackResponse(emotion, transcript);
+        addChatBubble(fb, 'ai', true);
+        speak(fb);
+        return;
+    }
+
+    try {
+        const sysPrompt = SYSTEM_PROMPT
+            .replace('[EMOTION]', emotion)
+            .replace('[TRANSCRIPT]', transcript);
+
+        const resp = await fetch(`${GEMINI_URL}?key=${key}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                systemInstruction: { parts: [{ text: sysPrompt }] },
+                contents: [{ parts: [{ text: transcript }] }],
+                generationConfig: {
+                    maxOutputTokens: 120,
+                    temperature: 0.8,
+                    topP: 0.9
+                }
+            })
+        });
+
+        if (!resp.ok) {
+            const errBody = await resp.text();
+            console.error('Gemini HTTP error:', resp.status, errBody);
+            throw new Error('HTTP ' + resp.status);
+        }
+
+        const data = await resp.json();
+
+        // Parse response Gemini
+        let aiMessage = '';
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            aiMessage = data.candidates[0].content.parts[0].text.trim();
+        }
+
+        if (!aiMessage) throw new Error('Response kosong');
+
+        // Bersihkan
+        if ((aiMessage.startsWith('"')&&aiMessage.endsWith('"'))||(aiMessage.startsWith("'")&&aiMessage.endsWith("'"))) {
+            aiMessage = aiMessage.slice(1,-1);
+        }
+        // Hapus wrapping asterisk/bold
+        aiMessage = aiMessage.replace(/^\*+|\*+$/g, '').trim();
+
+        lb.remove();
+        addChatBubble(aiMessage, 'ai');
+        speak(aiMessage);
+
+    } catch(error) {
+        console.error('Gemini error:', error);
+        lb.remove();
+        const fb = getFallbackResponse(emotion, transcript);
+        addChatBubble(fb, 'ai', true);
+        speak(fb);
+        showToast('AI error, pakai respons template', '⚠️');
+    }
+}
+
+// ================================================================
+// FALLBACK RESPONSES
+// ================================================================
+function getFallbackResponse(emotion, transcript) {
+    const l = (transcript||'').toLowerCase();
+    const pool = {
+        sad: [
+            "Aku ngerti kamu sedang sedih. Aku di sini buat kamu, kok.",
+            "Gak apa-apa nangis, itu cara hatimu bilang butuh istirahat.",
+            "Kamu kuat banget udah bertahan sampai sekarang.",
+            "Perasaanmu itu valid, gak usah dipaksakan senang.",
+            "Aku mau kamu tahu, kamu gak sendirian merasakan ini."
+        ],
+        happy: [
+            "Wah senang banget denger kamu happy! Terus semangat ya!",
+            "Senyum kamu bikin aku ikut senang!",
+            "Bagus banget! Nikmati momen bahagiamu ya.",
+            "Kamu layak bahagia, jangan lupa itu ya!"
+        ],
+        angry: [
+            "Aku merasakan kemarahmu. Itu wajar, kok.",
+            "Boleh marah, tapi jangan lupa jaga diri kamu ya.",
+            "Tarik napas dulu... aku tunggu kamu di sini.",
+            "Aku ngerti rasanya. Kamu gak sendirian.",
+            "Marah itu manusiawi, yang penting jangan merusak diri."
+        ],
+        neutral: [
+            "Terus cerita, aku lagi dengerin lho.",
+            "Hmm, terus apa yang terjadi?",
+            "Oke, aku mengerti. Ada lagi yang mau kamu ceritakan?",
+            "Aku di sini, ceritain aja semuanya.",
+            "Siap, aku masih di sini. Lanjutkan."
+        ]
+    };
+
+    // Konteks spesifik
+    if (l.match(/pacar|mantan|putus|hubungan|clbk|cmb|galauin/)) {
+        return ["Hubungan memang rumit. Yang penting, kamu udah berusaha yang terbaik.","Cinta itu nggak selalu mudah. Kamu berhak merasa apa yang kamu rasakan.","Putus cinta itu berat, tapi kamu akan melewatinya. Aku yakin."][Math.floor(Math.random()*3)];
+    }
+    if (l.match(/kerja|kuliah|tugas|boss|dosen|uang|gaji/)) {
+        return ["Tekanan itu berat. Jangan lupa istirahat ya.","Kamu udah cukup keras, gak usah terlalu sempurna.","Satu langkah demi satu langkah, kamu pasti bisa."][Math.floor(Math.random()*3)];
+    }
+    if (l.match(/teman|social|sendiri|sepi|lonely/)) {
+        return ["Merasa sepi itu normal. Tapi kamu gak sendirian, aku di sini.","Kadang kita butuh waktu sendiri, dan itu okay.","Aku senang kamu mau cerita kepadaku."][Math.floor(Math.random()*3)];
+    }
+
+    const arr = pool[emotion] || pool.neutral;
+    return arr[Math.floor(Math.random()*arr.length)];
+}
+
+// ================================================================
+// TTS
+// ================================================================
+function speak(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang='id-ID'; u.rate=1.0; u.pitch=1.1; u.volume=0.8;
+    const voices = window.speechSynthesis.getVoices();
+    const idV = voices.find(v=>v.lang.startsWith('id'));
+    if (idV) u.voice = idV;
+    window.speechSynthesis.speak(u);
+}
+
+// ================================================================
+// PARTICLES
+// ================================================================
+function initParticles() { resizeParticleCanvas(); window.addEventListener('resize',resizeParticleCanvas); for(let i=0;i<20;i++) particles.push(createParticle()); animateParticles(); }
+function resizeParticleCanvas() { const r=$('pageCurhat').getBoundingClientRect(); pCanvas.width=r.width; pCanvas.height=r.height; }
+function createParticle(burst=false) { const w=pCanvas.width||400,h=pCanvas.height||800; return {x:Math.random()*w,y:burst?h*0.35:h+Math.random()*40,vx:(Math.random()-0.5)*(burst?2.5:0.2),vy:-(Math.random()*(burst?2.5:0.5)+0.2),r:Math.random()*3+1,opacity:Math.random()*0.15+0.05,color:EMOTIONS[state.currentEmotion].color,life:1}; }
+function burstParticles(color,count) { for(let i=0;i<count;i++){const p=createParticle(true);p.color=color;p.opacity=0.3;p.r=Math.random()*4+1;particles.push(p);} }
+function animateParticles() { pCtx.clearRect(0,0,pCanvas.width,pCanvas.height); const tc=EMOTIONS[state.currentEmotion].color; for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life-=0.002;p.opacity*=0.998;p.color=tc;if(p.life<=0||p.opacity<0.01||p.y<-20){particles[i]=createParticle();particles[i].color=tc;continue;} pCtx.beginPath();pCtx.arc(p.x,p.y,Math.max(0.1,p.r*2.5),0,Math.PI*2);pCtx.fillStyle=p.color;pCtx.globalAlpha=Math.max(0,p.opacity*p.life*0.08);pCtx.fill(); pCtx.beginPath();pCtx.arc(p.x,p.y,Math.max(0.1,p.r),0,Math.PI*2);pCtx.fillStyle=p.color;pCtx.globalAlpha=Math.max(0,p.opacity*p.life);pCtx.fill();} pCtx.globalAlpha=1;if(particles.length>50)particles.splice(0,particles.length-30);requestAnimationFrame(animateParticles); }
+
+// ================================================================
+// OVERLAYS & TOASTS
+// ================================================================
+function dismissOverlay(id) { $(id).classList.remove('active'); }
+function showToast(message, icon='💬') { const c=$('toastContainer');const t=document.createElement('div');t.className='toast';t.innerHTML=`<span>${icon}</span><span>${message}</span>`;c.appendChild(t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3000); }
+
+// ================================================================
+// START
+// ================================================================
+init();
+</script>
+</body>
+</html>
