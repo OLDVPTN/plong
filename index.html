@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" "black-translucent">
+    <title>Plong By Poko Group</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root{--bg:#F9FAFB;--card:#FFF;--accent:#FF6B35;--accent2:#00C9A7;--danger:#EF5350;--warning:#F59E0B;--text:#1F2937;--dim:#6B7280;--border:#E5E7EB;--emotion-color:#6B7280;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px)}
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        html,body{height:100%;overflow:hidden;font-family:'Outfit',sans-serif;background:#E5E7EB;color:var(--text);-webkit-font-smoothing:antialiased}
+        .app{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;padding-top:var(--safe-top);padding-bottom:var(--safe-bottom)}
+        @media(min-width:480px){.app{position:relative;top:auto;left:auto;right:auto;bottom:auto;width:100%;max-width:420px;height:92vh;margin:auto;border-radius:28px;border:1px solid var(--border);box-shadow:0 10px 40px rgba(0,0,0,.08);padding:0}body{display:flex;justify-content:center;align-items:center}}
+
+        .loading-overlay{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;transition:opacity .5s,visibility .5s;padding:20px}
+        .loading-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
+        .load-pet{font-size:64px;animation:lb 1s ease-in-out infinite}
+        @keyframes lb{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-12px) scale(1.08)}}
+        .load-bar-track{width:180px;height:6px;background:#E5E7EB;border-radius:99px;overflow:hidden}
+        .load-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .4s}
+        .load-msg{font-size:.82rem;color:var(--dim);text-align:center}
+
+        header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:rgba(255,255,255,.9);flex-shrink:0;z-index:10;backdrop-filter:blur(10px)}
+        .logo{font-weight:800;font-size:.85rem;letter-spacing:.5px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
+        .nav-link{color:var(--dim);text-decoration:none;font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:6px}
+        .header-right{display:flex;align-items:center;gap:8px}
+        .ai-badge{font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:99px;display:flex;align-items:center;gap:4px}
+        .ai-badge.on{background:#D1FAE5;color:#065F46}
+        .ai-badge.off{background:#FEE2E2;color:#991B1B}
+        .ai-badge-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+        .ai-badge.on .ai-badge-dot{background:var(--accent2);box-shadow:0 0 4px var(--accent2)}
+        .ai-badge.off .ai-badge-dot{background:var(--danger)}
+
+        .main-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative}
+        #particleCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+
+        .cam-section{padding:20px 20px 0;position:relative;z-index:2}
+        .cam-wrapper{position:relative;width:100%;aspect-ratio:4/3;border-radius:24px;overflow:hidden;background:#E5E7EB;border:1px solid var(--border);box-shadow:0 8px 24px rgba(0,0,0,.04)}
+        .cam-wrapper video,.cam-wrapper canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+        .cam-wrapper canvas{z-index:2}
+        .cam-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;color:var(--dim);font-size:.85rem;z-index:3;text-align:center;padding:20px;background:rgba(243,244,246,.95)}
+        .cam-placeholder i{font-size:2.5rem;opacity:.3}
+        .cam-action-btn{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:5;background:var(--accent);color:#fff;border:none;padding:12px 24px;border-radius:99px;font-weight:700;font-family:'Outfit',sans-serif;font-size:16px;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 5px 15px rgba(255,107,53,.3);transition:.3s}
+        .cam-action-btn:active{transform:translateX(-50%) scale(.95)}
+        .cam-action-btn.stop{background:var(--danger);box-shadow:0 5px 15px rgba(239,83,80,.3)}
+        .timer-overlay{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:5;background:rgba(255,255,255,.9);padding:6px 16px;border-radius:99px;display:none;align-items:center;gap:8px;border:1px solid rgba(0,0,0,.05);font-variant-numeric:tabular-nums}
+        .timer-overlay.active{display:flex}
+        .timer-icon{color:var(--danger);font-size:.7rem;animation:blink 1s infinite}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+        .timer-text{font-size:.9rem;font-weight:700;letter-spacing:1px;color:var(--text)}
+        .timer-target{font-size:.7rem;color:var(--dim)}
+        .timer-check{color:var(--accent2);font-size:.8rem;margin-left:4px;display:none}
+        .timer-check.show{display:inline}
+        .liveness-badge{position:absolute;bottom:12px;right:12px;z-index:4;background:rgba(255,255,255,.9);padding:5px 10px;border-radius:99px;font-size:.7rem;font-weight:600;display:none;align-items:center;gap:5px;border:1px solid rgba(0,0,0,.05)}
+        .liveness-badge.active{display:flex}
+        .liveness-dot{width:6px;height:6px;border-radius:50%;transition:background .3s}
+
+        .tone-indicator{width:100%;margin-top:16px;text-align:center;font-size:.72rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
+        .tone-bars{display:flex;gap:15px;justify-content:center;margin-top:6px}
+        .tone-bar-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.65rem}
+        .tone-bar-track{width:90px;height:6px;background:#E5E7EB;border-radius:99px;overflow:hidden}
+        .tone-bar-fill{height:100%;width:0%;border-radius:99px;transition:width .1s linear}
+
+        .interim-bar{width:100%;margin-top:10px;background:#F3F4F6;border-radius:10px;padding:8px 14px;font-size:.8rem;color:var(--dim);font-style:italic;min-height:36px;display:none;align-items:center;gap:6px;border:1px solid var(--border)}
+        .interim-bar.active{display:flex}
+        .interim-bar i{color:var(--accent);font-size:.7rem;animation:blink .8s infinite}
+        .interim-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+        .chat-box{width:100%;margin-top:16px;background:#fff;border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.02);display:flex;flex-direction:column;gap:12px;min-height:120px;max-height:220px;overflow-y:auto}
+        .msg-bubble{padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.4;max-width:85%;word-wrap:break-word}
+        .msg-user{background:#F3F4F6;color:var(--text);align-self:flex-end;border-bottom-right-radius:4px}
+        .msg-ai{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;align-self:flex-start;border-bottom-left-radius:4px}
+        .msg-ai.fallback{background:linear-gradient(135deg,#6B7280,#9CA3AF)}
+        .msg-loading{align-self:flex-start;color:var(--dim);font-style:italic;font-size:13px;background:#F9FAFB}
+
+        .pet-area{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;padding:24px 20px 0}
+        .pet-glow{position:absolute;width:180px;height:180px;border-radius:50%;background:var(--emotion-color);filter:blur(60px);opacity:.15;transition:background .8s;pointer-events:none;top:50%;left:50%;transform:translate(-50%,-50%)}
+        .pet-avatar{font-size:70px;position:relative;z-index:2;filter:drop-shadow(0 4px 20px rgba(0,0,0,.1));animation:pb 3s ease-in-out infinite}
+        @keyframes pb{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-6px) scale(1.03)}}
+        .pet-avatar.react{animation:pr .5s ease}
+        @keyframes pr{0%{transform:scale(1)}30%{transform:scale(1.25)}60%{transform:scale(.95)}100%{transform:scale(1)}}
+        .pet-info{text-align:center;margin-top:8px}
+        .pet-level{font-size:.78rem;font-weight:600;color:var(--dim);margin-bottom:4px}
+        .xp-bar-track{width:120px;height:4px;background:#E5E7EB;border-radius:99px;overflow:hidden;margin:0 auto}
+        .xp-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .5s}
+
+        .expr-section{padding:16px 20px 40px;position:relative;z-index:2}
+        .expr-section h3{font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:10px}
+        .expr-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+        .expr-icon{font-size:.85rem;width:24px;text-align:center}
+        .expr-label{font-size:.72rem;color:var(--dim);width:60px}
+        .expr-bar-track{flex:1;height:6px;background:#E5E7EB;border-radius:99px;overflow:hidden}
+        .expr-bar-fill{height:100%;width:0%;border-radius:99px;transition:width .35s}
+        .expr-pct{font-size:.65rem;color:var(--dim);width:32px;text-align:right;font-variant-numeric:tabular-nums}
+
+        .overlay{position:fixed;inset:0;background:rgba(255,255,255,.97);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;opacity:0;visibility:hidden;transition:all .3s}
+        .overlay.active{opacity:1;visibility:visible}
+        .overlay-icon{font-size:50px;margin-bottom:16px}
+        .overlay h2{font-size:1.4rem;font-weight:800;margin-bottom:8px;color:var(--text)}
+        .overlay p{font-size:.85rem;color:var(--dim);line-height:1.5;margin-bottom:24px;max-width:300px}
+        .overlay-btn{background:var(--text);color:#fff;border:none;padding:12px 30px;border-radius:99px;font-weight:700;font-family:'Outfit',sans-serif;font-size:16px;cursor:pointer;transition:transform .2s;display:block;width:100%;max-width:340px}
+        .overlay-btn:active{transform:scale(.95)}
+        .robot-title{color:var(--danger)}.success-title{color:var(--accent2)}.fail-title{color:var(--warning)}
+
+        .toast-container{position:fixed;top:20px;left:20px;right:20px;z-index:300;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+        .toast{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:.8rem;display:flex;align-items:center;gap:8px;opacity:0;transform:translateY(-10px);transition:all .3s;pointer-events:auto;color:var(--text);box-shadow:0 4px 12px rgba(0,0,0,.05)}
+        .toast.show{opacity:1;transform:translateY(0)}
+    </style>
+</head>
+<body>
+
+<div class="app" id="app">
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="load-pet">🥚</div>
+        <div class="load-bar-track"><div class="load-bar-fill" id="loadBar"></div></div>
+        <div class="load-msg" id="loadMsg">Memulai...</div>
+    </div>
+    <div class="toast-container" id="toastContainer"></div>
+    <canvas id="particleCanvas"></canvas>
+
+    <div class="overlay" id="robotOverlay"><div class="overlay-icon">🤖</div><h2 class="robot-title">Robot Terdeteksi!</h2><p>Kamu tidak membuka mulut selama 10 detik.</p><button class="overlay-btn" onclick="dismissOv('robotOverlay')">Mengerti</button></div>
+    <div class="overlay" id="successOverlay"><div class="overlay-icon">🌟</div><h2 class="success-title">Sesi Selesai!</h2><p id="successDesc"></p><button class="overlay-btn" onclick="dismissOv('successOverlay')">Lanjut</button></div>
+    <div class="overlay" id="failOverlay"><div class="overlay-icon">⏱️</div><h2 class="fail-title">Waktu Kurang!</h2><p>Curhat minimal 1 menit untuk poin.</p><button class="overlay-btn" onclick="dismissOv('failOverlay')">Coba Lagi</button></div>
+
+    <header>
+        <a href="dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Dashboard</a>
+        <div class="logo">Plong By Poko Group</div>
+        <div class="header-right">
+            <span class="ai-badge off" id="aiBadge"><span class="ai-badge-dot"></span> AI</span>
+        </div>
+    </header>
+
+    <div class="main-scroll" id="pageCurhat">
+        <section class="cam-section">
+            <div class="cam-wrapper" id="camWrapper">
+                <video id="camVideo" autoplay playsinline muted></video>
+                <canvas id="camCanvas"></canvas>
+                <div class="cam-placeholder" id="camPlaceholder"><i class="fas fa-video-slash"></i><span>Aktifkan kamera & mic untuk mulai</span></div>
+                <button class="cam-action-btn" id="camActionBtn" onclick="toggleSession()"><i class="fas fa-microphone"></i> Mulai Curhat</button>
+                <div class="timer-overlay" id="timerOverlay"><i class="fas fa-circle timer-icon"></i><span class="timer-text" id="timerText">00:00</span><span class="timer-target">/ 01:00</span><i class="fas fa-check-circle timer-check" id="timerCheck"></i></div>
+                <div class="liveness-badge" id="livenessBadge"><span class="liveness-dot" id="livenessDot" style="background:var(--warning)"></span> <span id="livenessLabel">Diam</span></div>
+            </div>
+            <div class="tone-indicator">Deteksi Tone Suara
+                <div class="tone-bars">
+                    <div class="tone-bar-item">Volume<div class="tone-bar-track"><div class="tone-bar-fill" id="toneVol" style="background:var(--accent)"></div></div></div>
+                    <div class="tone-bar-item">Pitch<div class="tone-bar-track"><div class="tone-bar-fill" id="tonePitch" style="background:var(--accent2)"></div></div></div>
+                </div>
+            </div>
+            <div class="interim-bar" id="interimBar"><i class="fas fa-circle"></i><span class="interim-text" id="interimText"></span></div>
+            <div class="chat-box" id="chatBox">
+                <div class="msg-bubble msg-ai">Hai! Aku Plong pet-mu. Curhat saja padaku, aku mendengarkan.</div>
+            </div>
+        </section>
+        <section class="pet-area">
+            <div class="pet-glow" id="petGlow"></div>
+            <div class="pet-avatar" id="petAvatar">🥚</div>
+            <div class="pet-info"><div class="pet-level">Level <span id="petLevel">1</span></div><div class="xp-bar-track"><div class="xp-bar-fill" id="xpBar"></div></div></div>
+        </section>
+        <section class="expr-section">
+            <h3>Emosi Terdeteksi</h3>
+            <div id="exprBars"></div>
+        </section>
+    </div>
+</div>
+
+<script>
+/* ================================================================
+   POLLINATIONS.AI — 100% GRATIS, TANPA API KEY, TANPA CC
+   Response berupa PLAIN TEXT (bukan JSON!)
+   ================================================================ */
+const POLLINATIONS_URL = 'https://text.pollinations.ai/';
+const SYS_PROMPT = 'Kamu adalah Plong, hewan virtual empatik dari aplikasi "Plong By Poko Group". Tugasmu mendengarkan curhatan pengguna.\nPengguna terdeteksi merasa: [EMOTION]. Ucapan mereka: "[TRANSCRIPT]".\nBalas dengan singkat (1-2 kalimat saja), hangat, memvalidasi perasaan mereka. Bahasa Indonesia casual dan alami. Jangan pakai tanda baca berlebihan. Jangan sebut kamu AI atau bahasa model.';
+
+const EMOTIONS = {
+    neutral:{icon:'😐',label:'Netral',color:'#6B7280',pet:'🐣'},
+    happy:{icon:'😊',label:'Senang',color:'#FF6B35',pet:'🌞'},
+    sad:{icon:'😢',label:'Sedih',color:'#00C9A7',pet:'🌧️'},
+    angry:{icon:'😠',label:'Marah',color:'#EF5350',pet:'🔥'}
+};
+const PET_EVOL = {1:'🥚',2:'🐣',3:'🐥',5:'🐤',8:'🦆',12:'🦅',16:'🐉'};
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let S = {
+    petLevel:1,xp:0,xpNext:20,
+    stats:{happy:0,sad:0,angry:0,neutral:0},
+    history:[],active:false,t0:0,
+    lastMouth:0,lastXP:0,lastTone:0,
+    sessXP:0,moods:{happy:0,sad:0,angry:0,neutral:0},
+    minMs:60000,robotMs:10000,
+    emotion:'neutral',lastAI:0,
+    aiWorks:false // tracking apakah Pollinations berhasil
+};
+
+const $=id=>document.getElementById(id);
+const camV=$('camVideo'),camC=$('camCanvas'),camPH=$('camPlaceholder');
+const timerOv=$('timerOverlay'),timerTxt=$('timerText'),timerChk=$('timerCheck');
+const chatBox=$('chatBox'),petAv=$('petAvatar'),petGl=$('petGlow');
+const petLv=$('petLevel'),xpB=$('xpBar'),exprB=$('exprBars');
+const pC=$('particleCanvas'),pX=pC.getContext('2d');
+const camBtn=$('camActionBtn'),interimB=$('interimBar'),interimT=$('interimText');
+const aiBadge=$('aiBadge');
+
+let recog=null,parts=[],detInt=null,camStream=null,tickInt=null;
+let arousal='neutral',aCtx,analyser,mic,dArr,bLen;
+let faceOK=false,intTO=null;
+
+/* ================================================================
+   PERSISTENSI
+   ================================================================ */
+const curUser = localStorage.getItem('emopet_current_user');
+if(!curUser){ window.location.href='auth.html'; }
+
+function loadS(){
+    try{const u=JSON.parse(localStorage.getItem('emopet_users')||'[]').find(u=>u.username===curUser);
+    if(u&&u.data){S.petLevel=u.data.petLevel||1;S.xp=u.data.xp||0;S.xpNext=u.data.xpNext||20;S.stats=u.data.stats||{happy:0,sad:0,angry:0,neutral:0};S.history=u.data.history||[];}}catch(e){}
+}
+function saveS(){
+    try{let u=JSON.parse(localStorage.getItem('emopet_users')||'[]');const i=u.findIndex(x=>x.username===curUser);
+    if(i!==-1){u[i].data={petLevel:S.petLevel,xp:S.xp,xpNext:S.xpNext,stats:S.stats,history:S.history};localStorage.setItem('emopet_users',JSON.stringify(u));}}catch(e){}
+}
+
+function updBadge(){
+    aiBadge.className = 'ai-badge ' + (S.aiWorks ? 'on' : 'off');
+}
+
+/* ================================================================
+   INIT — tanpa modal API key, langsung jalan
+   ================================================================ */
+async function init(){
+    loadS(); updUI(); buildExpr(); initParts(); updBadge();
+
+    // 1) Load face-api dengan timeout
+    try{
+        $('loadMsg').textContent='Memuat deteksi wajah...'; $('loadBar').style.width='10%';
+        await Promise.race([
+            loadJS('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js'),
+            slp(12000).then(()=>Promise.reject('timeout'))
+        ]);
+        $('loadMsg').textContent='Download model...'; $('loadBar').style.width='35%';
+        await Promise.race([
+            Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/'),
+                faceapi.nets.faceLandmark68TinyNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/')
+            ]),
+            slp(15000).then(()=>Promise.reject('timeout'))
+        ]);
+        faceOK=true; $('loadBar').style.width='70%';
+    }catch(e){ console.warn('Face-api skip:',e); faceOK=false; }
+
+    setupSR();
+    if('speechSynthesis' in window){ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices(); }
+
+    // 2) Tes koneksi Pollinations di background
+    $('loadMsg').textContent='Tes koneksi AI...'; $('loadBar').style.width='85%';
+    await testPollinations();
+
+    // 3) Hide loading
+    $('loadBar').style.width='100%';
+    $('loadMsg').textContent = S.aiWorks ? 'Siap dengan AI!' : 'Siap (mode offline)';
+    await slp(400);
+    $('loadingOverlay').classList.add('hidden');
+
+    showToast('Halo, '+curUser+'!','👋');
+    if(!S.aiWorks) setTimeout(()=>showToast('AI offline, pakai respons template','⚡'),1200);
+    else showToast('AI gratis aktif tanpa API key!','🆓');
+}
+
+/* ================================================================
+   POLLINATIONS TEST — pakai .text() bukan .json()
+   ================================================================ */
+async function testPollinations(){
+    try{
+        const controller = new AbortController();
+        const timeout = setTimeout(()=>controller.abort(), 10000);
+
+        const r = await fetch(POLLINATIONS_URL, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            signal: controller.signal,
+            body: JSON.stringify({
+                messages:[{role:'user',content:'Jawab 1 kata: hai'}],
+                model:'openai',
+                temperature:0.3,
+                seed:42
+            })
+        });
+        clearTimeout(timeout);
+
+        if(!r.ok) { console.warn('Pollinations HTTP:', r.status); S.aiWorks=false; return; }
+
+        // INTI PERBAIKAN: response.text() bukan response.json()
+        const text = await r.text();
+        if(text && text.trim().length > 0){
+            S.aiWorks = true;
+            console.log('Pollinations OK:', text.trim().substring(0,50));
+        } else {
+            S.aiWorks = false;
+        }
+    }catch(e){
+        console.warn('Pollinations test gagal:', e.message);
+        S.aiWorks = false;
+    }
+    updBadge();
+}
+
+function loadJS(src){ return new Promise((r,j)=>{ if(typeof faceapi!=='undefined'){r();return;} const s=document.createElement('script'); s.src=src; s.onload=r; s.onerror=()=>j('fail'); document.head.appendChild(s); }); }
+function slp(ms){ return new Promise(r=>setTimeout(r,ms)); }
+window.addEventListener('beforeunload',()=>{ if(S.active) stopAll(); });
+
+/* ================================================================
+   SESI
+   ================================================================ */
+async function toggleSession(){ if(S.active) endSess(false); else await startSess(); }
+
+async function startSess(){
+    try{
+        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:320},height:{ideal:240}},audio:true});
+        camStream=stream; camV.srcObject=stream; await camV.play();
+        S.active=true; S.sessXP=0; S.moods={happy:0,sad:0,angry:0,neutral:0};
+        S.t0=Date.now(); S.lastMouth=Date.now(); S.lastXP=Date.now(); S.lastTone=Date.now(); S.emotion='neutral';
+        camPH.style.display='none'; timerOv.classList.add('active'); $('livenessBadge').classList.add('active');
+        camBtn.innerHTML='<i class="fas fa-stop"></i> Stop'; camBtn.classList.add('stop');
+        camC.width=camV.videoWidth||320; camC.height=camV.videoHeight||240;
+        if(faceOK) startFace();
+        startAudio(stream);
+        if(recog){ try{recog.start();}catch(e){ showToast('Speech recognition tidak tersedia','⚠️'); } }
+        else showToast('Browser tidak support speech recognition','⚠️');
+        startTick(); showToast('Sesi dimulai — curhat saja!','🎙️');
+    }catch(e){ console.error(e); showToast('Izinkan akses kamera & mikrofon','⚠️'); }
+}
+
+function stopAll(){
+    if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+    camV.srcObject=null;
+    const ctx=camC.getContext('2d'); ctx.clearRect(0,0,camC.width,camC.height);
+    if(detInt){ clearInterval(detInt); detInt=null; }
+    if(aCtx&&aCtx.state!=='closed'){ try{aCtx.close();}catch(e){} aCtx=null; }
+    if(recog){ try{recog.stop();}catch(e){} }
+    speechSynthesis.cancel();
+    interimB.classList.remove('active');
+    if(intTO){ clearTimeout(intTO); intTO=null; }
+}
+
+function endSess(isRobot=false){
+    const dur=Date.now()-S.t0; stopAll(); S.active=false;
+    camPH.style.display='flex'; timerOv.classList.remove('active'); $('livenessBadge').classList.remove('active');
+    camBtn.innerHTML='<i class="fas fa-microphone"></i> Mulai Curhat'; camBtn.classList.remove('stop');
+    $('toneVol').style.width='0%'; $('tonePitch').style.width='0%'; timerTxt.style.color='var(--text)';
+    document.querySelectorAll('.expr-bar-fill').forEach(b=>b.style.width='0%');
+    document.querySelectorAll('.expr-pct').forEach(p=>p.textContent='0');
+    let dom='neutral',mx=0;
+    for(const[m,c]of Object.entries(S.moods)) if(c>mx){mx=c;dom=m;}
+    if(isRobot){ $('robotOverlay').classList.add('active'); S.sessXP=0; }
+    else if(dur<S.minMs){ $('failOverlay').classList.add('active'); S.sessXP=0; }
+    else{ bankXP(dur,dom); const mn=Math.floor(dur/60000),sc=Math.floor((dur%60000)/1000); $('successDesc').textContent='Kamu curhat selama '+mn+'m '+sc+'s. Pet +'+S.sessXP+' poin!'; $('successOverlay').classList.add('active'); }
+    chatBox.innerHTML='<div class="msg-bubble msg-ai">Sesi selesai. Terima kasih sudah curhat!</div>';
+}
+
+function bankXP(dur,dom){
+    for(const[m,c]of Object.entries(S.moods)) S.stats[m]=(S.stats[m]||0)+c;
+    addXP(S.sessXP);
+    S.history.unshift({date:new Date().toISOString(),duration:Math.round(dur/1000),xp:S.sessXP,mood:dom});
+    if(S.history.length>20) S.history.pop();
+    saveS(); S.sessXP=0;
+}
+
+/* ================================================================
+   TICK
+   ================================================================ */
+function startTick(){
+    if(tickInt) clearInterval(tickInt);
+    tickInt = setInterval(()=>{
+        if(!S.active) return;
+        const now=Date.now(), el=now-S.t0;
+        const mn=Math.floor(el/60000), sc=Math.floor((el%60000)/1000);
+        timerTxt.textContent = String(mn).padStart(2,'0')+':'+String(sc).padStart(2,'0');
+        if(el>=S.minMs){ timerChk.classList.add('show'); timerTxt.style.color='var(--accent2)'; }
+        else { timerChk.classList.remove('show'); timerTxt.style.color='var(--text)'; }
+        if(now-S.lastMouth>S.robotMs){ endSess(true); return; }
+        if(now-S.lastTone>3000){ S.lastTone=now; if(arousal==='high')toneEmo('angry');else if(arousal==='low')toneEmo('sad');else toneEmo('neutral'); }
+        if(now-S.lastXP>4000){ S.lastXP=now; S.sessXP+=2; S.moods[S.emotion]++; updExpr(S.emotion); }
+    },1000);
+}
+
+/* ================================================================
+   XP & UI
+   ================================================================ */
+function addXP(a){
+    S.xp+=a;
+    while(S.xp>=S.xpNext){ S.xp-=S.xpNext; S.petLevel++; S.xpNext=S.petLevel*20; showToast('Level up! Level '+S.petLevel,'⬆️'); const e=PET_EVOL[S.petLevel]; if(e) setTimeout(()=>showToast('Evolusi! '+e,'✨'),600); }
+    saveS(); updUI();
+}
+function updUI(){ petLv.textContent=S.petLevel; xpB.style.width=(S.xp/S.xpNext*100)+'%'; petAv.textContent=PET_EVOL[S.petLevel]||'🥚'; }
+function buildExpr(){
+    const o=['happy','neutral','sad','angry'];
+    exprB.innerHTML = o.map(e=>{const c=EMOTIONS[e]; return '<div class="expr-row"><span class="expr-icon">'+c.icon+'</span><span class="expr-label">'+c.label+'</span><div class="expr-bar-track"><div class="expr-bar-fill" data-e="'+e+'" style="background:'+c.color+';width:0%"></div></div><span class="expr-pct" data-e="'+e+'">0</span></div>';}).join('');
+}
+function updExpr(e){ const b=document.querySelector('.expr-bar-fill[data-e="'+e+'"]'),p=document.querySelector('.expr-pct[data-e="'+e+'"]'); if(b)b.style.width=Math.min(100,S.moods[e]*5)+'%'; if(p)p.textContent=S.moods[e]; }
+
+/* ================================================================
+   FACE DETECTION
+   ================================================================ */
+function startFace(){
+    if(!faceOK) return; if(detInt) clearInterval(detInt);
+    detInt = setInterval(async()=>{
+        if(!S.active||!faceOK) return;
+        try{
+            const d = await faceapi.detectSingleFace(camV,new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.4})).withFaceLandmarks(true);
+            const ctx=camC.getContext('2d'); ctx.clearRect(0,0,camC.width,camC.height);
+            if(d){
+                const b=d.detection.box, sx=camC.width/camV.videoWidth, sy=camC.height/camV.videoHeight;
+                ctx.strokeStyle=EMOTIONS[S.emotion].color; ctx.lineWidth=2; ctx.setLineDash([6,4]);
+                ctx.strokeRect(b.x*sx,b.y*sy,b.width*sx,b.height*sy); ctx.setLineDash([]);
+                const m=d.landmarks.getMouth();
+                if(m.length>10){ const dist=Math.abs(m[13].y-m[19].y); if(dist/b.height>0.12){ S.lastMouth=Date.now(); $('livenessDot').style.background='var(--accent2)'; $('livenessLabel').textContent='Bicara'; }else{ $('livenessDot').style.background='var(--warning)'; $('livenessLabel').textContent='Diam'; } }
+            }else{ $('livenessLabel').textContent='Wajah?'; }
+        }catch(e){}
+    },300);
+}
+
+/* ================================================================
+   AUDIO
+   ================================================================ */
+function startAudio(stream){
+    try{ aCtx=new(window.AudioContext||window.webkitAudioContext)(); analyser=aCtx.createAnalyser(); mic=aCtx.createMediaStreamSource(stream); mic.connect(analyser); analyser.fftSize=2048; bLen=analyser.fftSize; dArr=new Float32Array(bLen); drawTone(); }catch(e){ console.warn('Audio err:',e); }
+}
+function drawTone(){
+    if(!S.active||!analyser) return; requestAnimationFrame(drawTone);
+    analyser.getFloatTimeDomainData(dArr); let sum=0; for(let i=0;i<bLen;i++) sum+=dArr[i]*dArr[i];
+    let rms=Math.sqrt(sum/bLen), vp=Math.min(100,rms*250);
+    let pitch=autoCorr(dArr,aCtx.sampleRate), pp=0; if(pitch!==-1) pp=Math.min(100,Math.max(0,((pitch-80)/300)*100));
+    $('toneVol').style.width=vp+'%'; $('tonePitch').style.width=pp+'%';
+    if(rms>0.04) S.lastMouth=Date.now();
+    if(rms<0.01) arousal='neutral'; else if(rms>0.06&&pitch>180) arousal='high'; else if(rms<0.04&&pitch!==-1&&pitch<160) arousal='low'; else arousal='neutral';
+}
+function autoCorr(buf,sr){
+    let SZ=buf.length,rms=0; for(let i=0;i<SZ;i++) rms+=buf[i]*buf[i]; rms=Math.sqrt(rms/SZ); if(rms<0.01) return -1;
+    let r1=0,r2=SZ-1,th=0.2; for(let i=0;i<SZ/2;i++) if(Math.abs(buf[i])<th){r1=i;break;} for(let i=1;i<SZ/2;i++) if(Math.abs(buf[SZ-i])<th){r2=SZ-i;break;}
+    let tr=buf.slice(r1,r2),ts=tr.length; if(ts<10) return -1;
+    let c=new Array(ts).fill(0); for(let i=0;i<ts;i++) for(let j=0;j<ts-i;j++) c[i]+=tr[j]*tr[j+i];
+    let d=0; while(d<ts-1&&c[d]>c[d+1]) d++; let mx=-1,mp=-1; for(let i=d;i<ts;i++) if(c[i]>mx){mx=c[i];mp=i;}
+    return mp>0?sr/mp:-1;
+}
+
+/* ================================================================
+   SPEECH RECOGNITION
+   ================================================================ */
+function setupSR(){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return;
+    recog=new SR(); recog.lang='id-ID'; recog.continuous=true; recog.interimResults=true; recog.maxAlternatives=1;
+    recog.onresult=(ev)=>{
+        let im='',fi='';
+        for(let i=ev.resultIndex;i<ev.results.length;++i){ const t=ev.results[i][0].transcript; if(ev.results[i].isFinal) fi+=t; else im+=t; }
+        if(im){ interimT.textContent=im; interimB.classList.add('active'); if(intTO) clearTimeout(intTO); intTO=setTimeout(()=>interimB.classList.remove('active'),2000); }
+        if(fi.trim()){ interimB.classList.remove('active'); procText(fi); addMsg(fi,'user'); callAI(fi,S.emotion); }
+    };
+    recog.onend=()=>{ if(S.active) setTimeout(()=>{ if(S.active&&recog) try{recog.start();}catch(e){} },200); };
+    recog.onerror=(e)=>{ if(e.error==='no-speech'||e.error==='aborted') return; };
+}
+
+/* ================================================================
+   EMOSI
+   ================================================================ */
+function procText(t){ const l=t.toLowerCase(); if(l.match(/marah|kesel|benci|sial|jengkel|geram|sebel/))setEmo('angry');else if(l.match(/sedih|nangis|galau|sepi|lelah|capek|kecewa|menyesal/))setEmo('sad');else if(l.match(/senang|bahagia|syukur|haha|wkwk|mantap|keren|hebat/))setEmo('happy'); }
+function toneEmo(a){ if(a==='high')setEmo('angry');else if(a==='low')setEmo('sad');else setEmo('neutral'); }
+function setEmo(e){
+    if(S.emotion===e) return; const c=EMOTIONS[e]; if(!c) return; S.emotion=e;
+    document.documentElement.style.setProperty('--emotion-color',c.color);
+    petAv.textContent = S.petLevel>=3 ? c.pet : (PET_EVOL[S.petLevel]||c.pet);
+    petAv.classList.remove('react'); void petAv.offsetWidth; petAv.classList.add('react');
+    petGl.style.background=c.color; petGl.style.opacity='0.15'; burstP(c.color,8);
+}
+
+/* ================================================================
+   AI CALL — POLLINATIONS.AI
+   response.text() bukan response.json() !!!
+   ================================================================ */
+function addMsg(text,who,fb=false){
+    const b=document.createElement('div'); b.className='msg-bubble msg-'+who+(fb?' fallback':''); b.textContent=text;
+    chatBox.appendChild(b); chatBox.scrollTop=chatBox.scrollHeight;
+}
+
+async function callAI(transcript,emotion){
+    const now=Date.now(); if(now-S.lastAI<5000) return; S.lastAI=now;
+
+    const lb=document.createElement('div'); lb.className='msg-bubble msg-ai msg-loading';
+    lb.textContent=S.aiWorks?'Plong berpikir...':'Plong merespon...';
+    chatBox.appendChild(lb); chatBox.scrollTop=chatBox.scrollHeight;
+
+    // Kalau AI sudah diketahui mati, langsung fallback
+    if(!S.aiWorks){ lb.remove(); const fb=fallBack(emotion,transcript); addMsg(fb,'ai',true); speak(fb); return; }
+
+    try{
+        const sys = SYS_PROMPT.replace('[EMOTION]',emotion).replace('[TRANSCRIPT]',transcript);
+
+        const controller = new AbortController();
+        const timeout = setTimeout(()=>controller.abort(), 15000); // 15 detik timeout
+
+        const r = await fetch(POLLINATIONS_URL, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            signal: controller.signal,
+            body: JSON.stringify({
+                messages:[
+                    {role:'system', content:sys},
+                    {role:'user', content:transcript}
+                ],
+                model:'openai',
+                temperature:0.8,
+                seed:Math.floor(Math.random()*99999)
+            })
+        });
+        clearTimeout(timeout);
+
+        if(!r.ok) throw new Error('HTTP '+r.status);
+
+        // =============================================
+        // PERBAIKAN INTI: .text() BUKAN .json()
+        // Pollinations return plain text, bukan JSON!
+        // =============================================
+        let msg = (await r.text()).trim();
+
+        // Bersihkan wrapping quote kalau ada
+        if((msg.startsWith('"')&&msg.endsWith('"'))||(msg.startsWith("'")&&msg.endsWith("'"))){
+            msg = msg.slice(1,-1);
+        }
+        // Bersihkan markdown bold/italic
+        msg = msg.replace(/^\*+|\*+$/g,'').trim();
+
+        if(!msg || msg.length < 2) throw new Error('Response kosong');
+
+        // Sukses!
+        lb.remove();
+        addMsg(msg,'ai');
+        speak(msg);
+
+    }catch(err){
+        console.error('Pollinations err:', err.message);
+
+        // Kalau error berulang, tandai offline
+        S.aiWorks = false;
+        updBadge();
+
+        lb.remove();
+        const fb=fallBack(emotion,transcript);
+        addMsg(fb,'ai',true);
+        speak(fb);
+        showToast('AI offline, pakai template','⚠️');
+    }
+}
+
+/* ================================================================
+   FALLBACK RESPONSES (kalau Pollinations mati)
+   ================================================================ */
+function fallBack(emo,txt){
+    const l=(txt||'').toLowerCase();
+    const p={
+        sad:["Aku ngerti kamu sedang sedih. Aku di sini buat kamu, kok.","Gak apa-apa nangis, itu cara hatimu bilang butuh istirahat.","Kamu kuat banget udah bertahan sampai sekarang.","Perasaanmu itu valid, gak usah dipaksakan senang.","Aku mau kamu tahu, kamu gak sendirian merasakan ini."],
+        happy:["Wah senang banget denger kamu happy! Terus semangat ya!","Senyum kamu bikin aku ikut senang!","Bagus banget! Nikmati momen bahagiamu ya.","Kamu layak bahagia, jangan lupa itu ya!"],
+        angry:["Aku merasakan kemarahmu. Itu wajar, kok.","Boleh marah, tapi jangan lupa jaga diri kamu ya.","Tarik napas dulu... aku tunggu kamu di sini.","Aku ngerti rasanya. Kamu gak sendirian.","Marah itu manusiawi, yang penting jangan merusak diri."],
+        neutral:["Terus cerita, aku lagi dengerin lho.","Hmm, terus apa yang terjadi?","Oke, aku mengerti. Ada lagi yang mau kamu ceritakan?","Aku di sini, ceritain aja semuanya.","Siap, aku masih di sini. Lanjutkan."]
+    };
+    if(l.match(/pacar|mantan|putus|hubungan|clbk|cmb/)) return["Hubungan memang rumit. Yang penting kamu udah berusaha yang terbaik.","Cinta nggak selalu mudah. Kamu berhak merasa apa yang kamu rasakan.","Putus cinta itu berat, tapi kamu akan melewatinya."][Math.floor(Math.random()*3)];
+    if(l.match(/kerja|kuliah|tugas|boss|dosen|uang|gaji/)) return["Tekanan itu berat. Jangan lupa istirahat ya.","Kamu udah cukup keras, gak usah terlalu sempurna.","Satu langkah demi satu langkah, kamu pasti bisa."][Math.floor(Math.random()*3)];
+    if(l.match(/teman|sendiri|sepi|lonely/)) return["Merasa sepi itu normal. Tapi kamu gak sendirian, aku di sini.","Kadang kita butuh waktu sendiri, dan itu okay.","Aku senang kamu mau cerita kepadaku."][Math.floor(Math.random()*3)];
+    const a=p[emo]||p.neutral; return a[Math.floor(Math.random()*a.length)];
+}
+
+/* ================================================================
+   TTS
+   ================================================================ */
+function speak(text){
+    if(!('speechSynthesis' in window)) return; speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text); u.lang='id-ID'; u.rate=1; u.pitch=1.1; u.volume=0.8;
+    const v=speechSynthesis.getVoices().find(x=>x.lang.startsWith('id')); if(v) u.voice=v;
+    speechSynthesis.speak(u);
+}
+
+/* ================================================================
+   PARTICLES
+   ================================================================ */
+function initParts(){ rszPC(); window.addEventListener('resize',rszPC); for(let i=0;i<20;i++) parts.push(mkP()); animP(); }
+function rszPC(){ const r=$('pageCurhat').getBoundingClientRect(); pC.width=r.width; pC.height=r.height; }
+function mkP(burst){ const w=pC.width||400,h=pC.height||800; return{x:Math.random()*w,y:burst?h*0.35:h+Math.random()*40,vx:(Math.random()-0.5)*(burst?2.5:0.2),vy:-(Math.random()*(burst?2.5:0.5)+0.2),r:Math.random()*3+1,op:Math.random()*0.15+0.05,col:EMOTIONS[S.emotion].color,life:1}; }
+function burstP(c,n){ for(let i=0;i<n;i++){const p=mkP(true);p.col=c;p.op=0.3;p.r=Math.random()*4+1;parts.push(p);} }
+function animP(){
+    pX.clearRect(0,0,pC.width,pC.height); const tc=EMOTIONS[S.emotion].color;
+    for(let i=parts.length-1;i>=0;i--){
+        const p=parts[i]; p.x+=p.vx; p.y+=p.vy; p.life-=0.002; p.op*=0.998; p.col=tc;
+        if(p.life<=0||p.op<0.01||p.y<-20){parts[i]=mkP(false);parts[i].col=tc;continue;}
+        pX.beginPath();pX.arc(p.x,p.y,Math.max(0.1,p.r*2.5),0,Math.PI*2);pX.fillStyle=p.col;pX.globalAlpha=Math.max(0,p.op*p.life*0.08);pX.fill();
+        pX.beginPath();pX.arc(p.x,p.y,Math.max(0.1,p.r),0,Math.PI*2);pX.fillStyle=p.col;pX.globalAlpha=Math.max(0,p.op*p.life);pX.fill();
+    }
+    pX.globalAlpha=1; if(parts.length>50) parts.splice(0,parts.length-30);
+    requestAnimationFrame(animP);
+}
+
+/* ================================================================
+   OVERLAYS & TOASTS
+   ================================================================ */
+function dismissOv(id){ $(id).classList.remove('active'); }
+function showToast(msg,icon){
+    const c=$('toastContainer'),t=document.createElement('div');t.className='toast';t.innerHTML='<span>'+icon+'</span><span>'+msg+'</span>';
+    c.appendChild(t); requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+    setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3000);
+}
+
+init();
+</script>
+</body>
+</html>
